@@ -4,6 +4,7 @@
 #include "Bind.h"
 
 class TaskSwitcher;
+struct TaskInfo;
 
 template<typename T>
 class List {
@@ -41,6 +42,18 @@ public:
 class Task {
 public:
   typedef EventDelegate<TaskSwitcher, void> TaskDelegate;
+  static int8_t Id();
+
+protected:
+  static TaskInfo& GetTaskInfo(int8_t taskId);
+  static void NextTask();
+  static void CallTaskDelegate(TaskInfo& taskInfo);
+
+  friend void SwitchToNextTask();
+  friend void SaveTaskContext(int8_t);
+  friend void RestoreTaskContext(int8_t);
+  friend TaskInfo& GetCurrentTaskInfo();
+  friend void CallTaskDelegate(TaskInfo& taskInfo);
 };
 
 struct TaskInfo {
@@ -51,7 +64,8 @@ struct TaskInfo {
   Task::TaskDelegate::Argument* arg;
   Task::TaskDelegate delegate;
 
-  TaskInfo() : stack(0), id(-1), stack_pointer(0), arg(0) {}
+  TaskInfo()
+    : stack(0), id(-1), stack_pointer(0), arg(0) {}
 };
 
 class TaskSwitcher {
@@ -59,32 +73,27 @@ protected:
   List<TaskInfo> _tasks;
   int8_t current_task;
   static TaskSwitcher _instance;
-public:  
-  TaskSwitcher(Timer& timer)
-    : _tasks(10), current_task(0){
-        timer.OnTick = Timer::TickEvent(this, &TaskSwitcher::Switch);
-      };
 
-  void Switch(Timer* timer, TimerArgs* args) {
-    auto new_task = current_task;
+  TaskSwitcher()
+    : _tasks(10), current_task(0) {
+    _tasks[0].id = 0;  // main loop()
+  };
+
+  void NextTask() {
     do {
-      new_task = (new_task + 1) % _tasks.Length();
-    } while (!_tasks[new_task].stack_pointer);
-
-    if (new_task != current_task) {
-      SaveContext();
-      current_task = new_task;
-      RestoreContext();
-    }
+      current_task = (current_task + 1) % _tasks.Length();
+    } while (!_tasks[current_task].id >= 0);
   }
 
+  void Setup();
   void AddTask(Task::TaskDelegate& task, Task::TaskDelegate::Argument* arg, int16_t stackSize);
   void CompleteTask(TaskInfo* taskInfo);
   void RunTask(TaskInfo* taskInfo);
   void DeleteTask(TaskInfo* taskInfo);
-  
-  virtual void SaveContext();
-  virtual void RestoreContext();
+
+protected:
+  friend class Buratino;
+  friend class Task;
 };
 
 #endif

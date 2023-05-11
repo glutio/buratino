@@ -103,12 +103,12 @@ protected:
     HAL::lc.setIntensity(0, map(args->value, 0, 1023, 0, 15));
   }
 public:
-  void OnTimer(Timer* sender, TimerArgs* args) {
-    if (HAL::motion.get_Value() && _scroll) {
-      Scroll();
-      DrawHeart();
-    }
-  }
+  // void OnTimer(Timer* sender, TimerArgs* args) {
+  //   if (HAL::motion.get_Value() && _scroll) {
+  //     Scroll();
+  //     DrawHeart();
+  //   }
+  // }
 };
 
 App app;
@@ -121,8 +121,6 @@ void setup() {
   Buratino::Default().AddDevice(&HAL::joystick);
   Buratino::Default().AddDevice(&HAL::mic);
   Buratino::Default().Setup();
-  TimerOne::instance.Setup();
-  TimerOne::instance.OnTick = Timer::TickEvent(&app, &App::OnTimer);
 }
 
 void loop() {

@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 #include "Bind.h"
-#include "Timer.h"
 #include "TaskSwitcher.h"
 #include "Pins.h"
 #include "Joystick.h"
@@ -65,9 +64,7 @@ public:
           _devices[i]->Setup();
         }
       }
-
-      TimerOne::instance.Setup();
-
+      _taskSwitcher.Setup();
       _initialized = true;
     }
   }
@@ -81,6 +78,8 @@ public:
       }
     }
   }
+
+  friend class Task;
 };
 
 #endif
