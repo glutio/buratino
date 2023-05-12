@@ -39,7 +39,6 @@ public:
     : _scrollUp(true),
       _scroll(true) {
 
-    Serial.begin(115200);
     HAL::joystick.OnMove = Joystick::MoveEvent(this, &App::OnJoystickMove);
     HAL::joystick.OnClick = Joystick::ClickEvent(this, &App::OnJoystickClick);
     // HAL::button.OnChange = DigitalPin::ChangeEvent(this, &App::OnButtonClick);
@@ -47,11 +46,8 @@ public:
     // HAL::pot.OnChange = AnalogPin::ChangeEvent(this, &App::OnBrightnessChange);
     // HAL::mic.OnChange = AnalogPin::ChangeEvent(this, &App::OnMicChange);
 
-    for (auto i = 0; i < 64; ++i) {
-      Buratino::RunTask(BTask(this, &App::Draw), (void*)i, 16);
-    }
   }
-protected:
+
   void OnJoystickMove(Joystick* joystick, JoystickMoveArgs* args) {
     // if (_scroll) {
     //   return;
@@ -125,16 +121,26 @@ public:
 App app;
 
 void setup() {
-  Serial.print("Setup");
+  Serial.begin(115200);
+
+
   Buratino::AddDevice(&HAL::button);
   Buratino::AddDevice(&HAL::motion);
   Buratino::AddDevice(&HAL::pot);
   Buratino::AddDevice(&HAL::joystick);
   Buratino::AddDevice(&HAL::mic);
+
+  for (auto i = 0; i < 64; ++i) {
+    Buratino::RunTask(BTask(&app, &App::Draw), (void*)i, 16);
+  }
+
+  Serial.println("done");
+  Serial.flush();
+
   Buratino::Setup();
 }
 
 void loop() {
   Buratino::Update();
-  Serial.print("loop");
+  Serial.println("loop");
 }
