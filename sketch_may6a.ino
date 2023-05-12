@@ -1,5 +1,3 @@
-#include <avr/io.h>
-#include <avr/interrupt.h>
 
 #include <LedControl.h>
 #include "Heart.h"
@@ -50,7 +48,7 @@ public:
     HAL::pot.OnChange = AnalogPin::ChangeEvent(this, &App::OnBrightnessChange);
     HAL::mic.OnChange = AnalogPin::ChangeEvent(this, &App::OnMicChange);
 
-    //Task::Run(TaskDelegate(animation, &Animation::Tick))
+    Buratino::Run(TaskDelegate(this, &App::Draw));
   }
 protected:
   void OnJoystickMove(Joystick* joystick, JoystickMoveArgs* args) {
@@ -70,9 +68,17 @@ protected:
     DrawHeart();
   }
 
-  void OnMicChange(AnalogPin*, AnalogPinChangeArgs* args)
-  {
-    
+  void Draw(Buratino*, void*) {
+    while (1) {
+      if (HAL::motion.get_Value() && _scroll) {
+        Scroll();
+        DrawHeart();
+        delay(100);
+      }
+    }
+  }
+
+  void OnMicChange(AnalogPin*, AnalogPinChangeArgs* args) {
   }
 
   void OnJoystickClick(Joystick* joystick, void*) {
@@ -88,8 +94,7 @@ protected:
   void OnMotionChange(DigitalPin* pin, DigitalPinChangeArgs* args) {
     if (args->value) {
       _offset = 0;
-      if (!_scroll)
-      {
+      if (!_scroll) {
         DrawHeart();
       }
       HAL::lc.shutdown(0, false);
