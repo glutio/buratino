@@ -39,22 +39,23 @@ public:
     : _scrollUp(true),
       _scroll(true) {
 
-    HAL::lc.shutdown(0, HAL::motion.get_Value());
-
+    Serial.begin(115200);
     HAL::joystick.OnMove = Joystick::MoveEvent(this, &App::OnJoystickMove);
     HAL::joystick.OnClick = Joystick::ClickEvent(this, &App::OnJoystickClick);
-    HAL::button.OnChange = DigitalPin::ChangeEvent(this, &App::OnButtonClick);
+    // HAL::button.OnChange = DigitalPin::ChangeEvent(this, &App::OnButtonClick);
     HAL::motion.OnChange = DigitalPin::ChangeEvent(this, &App::OnMotionChange);
-    HAL::pot.OnChange = AnalogPin::ChangeEvent(this, &App::OnBrightnessChange);
-    HAL::mic.OnChange = AnalogPin::ChangeEvent(this, &App::OnMicChange);
+    // HAL::pot.OnChange = AnalogPin::ChangeEvent(this, &App::OnBrightnessChange);
+    // HAL::mic.OnChange = AnalogPin::ChangeEvent(this, &App::OnMicChange);
 
-    Buratino::Run(TaskDelegate(this, &App::Draw));
+    for (auto i = 0; i < 64; ++i) {
+      Buratino::RunTask(BTask(this, &App::Draw), (void*)i, 16);
+    }
   }
 protected:
   void OnJoystickMove(Joystick* joystick, JoystickMoveArgs* args) {
-    if (_scroll) {
-      return;
-    }
+    // if (_scroll) {
+    //   return;
+    // }
 
     _scrollUp = args->Y > 512;
 
@@ -65,16 +66,21 @@ protected:
     }
 
     Scroll();
-    DrawHeart();
+    //DrawHeart();
   }
 
-  void Draw(Buratino*, void*) {
+  void Draw(Buratino*, void* pixel) {
+    auto x = (int8_t)pixel % 8;
+    auto y = (int8_t)pixel / 8;
+
     while (1) {
-      if (HAL::motion.get_Value() && _scroll) {
-        Scroll();
-        DrawHeart();
-        delay(100);
-      }
+      auto i = (_offset + y) % sizeof(heart);
+      auto h = _shift < 0 ? heart[x] << -_shift : heart[x] >> _shift;
+      auto state = h & (1 << x);
+
+      HAL::lc.setLed(0, x, y, state);
+
+      delay(100);
     }
   }
 
@@ -119,15 +125,16 @@ public:
 App app;
 
 void setup() {
-  Serial.begin(115200);
-  Buratino::Default().AddDevice(&HAL::button);
-  Buratino::Default().AddDevice(&HAL::motion);
-  Buratino::Default().AddDevice(&HAL::pot);
-  Buratino::Default().AddDevice(&HAL::joystick);
-  Buratino::Default().AddDevice(&HAL::mic);
-  Buratino::Default().Setup();
+  Serial.print("Setup");
+  Buratino::AddDevice(&HAL::button);
+  Buratino::AddDevice(&HAL::motion);
+  Buratino::AddDevice(&HAL::pot);
+  Buratino::AddDevice(&HAL::joystick);
+  Buratino::AddDevice(&HAL::mic);
+  Buratino::Setup();
 }
 
 void loop() {
-  Buratino::Default().Update();
+  Buratino::Update();
+  Serial.print("loop");
 }

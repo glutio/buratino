@@ -145,14 +145,14 @@ void kill_task(uint8_t id) {
   switch_task();
 }
 
-void run_task(TaskInfo* taskInfo) {
+void task_wrapper(TaskInfo* taskInfo) {
   // get TaskInfo pointer from the stack
-  taskInfo->delegate(Buratino::_instance, taskInfo->arg);
+  taskInfo->delegate(&Buratino::_instance, taskInfo->arg);
   kill_task(get_task_id());
 }
 
 
-void run_task(Task::TaskDelegate& task, Task::TaskDelegate::Argument* arg, int16_t stackSize = 128) {
+void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   noInterrupts();
 
   auto new_task = 0;
@@ -175,25 +175,32 @@ void run_task(Task::TaskDelegate& task, Task::TaskDelegate::Argument* arg, int16
   *sp-- = 0xAA;  // magic number indicating bottom of stack
 
   // push run_task address for `ret` to pop
-  *sp-- = lowByte((uintptr_t)run_task);
-  *sp-- = highByte((uintptr_t)run_task);
+  *sp-- = lowByte((uintptr_t)task_wrapper);
+  *sp-- = highByte((uintptr_t)task_wrapper);
 
   taskInfo->ctx[25] = lowByte((uintptr_t)taskInfo);
   taskInfo->ctx[24] = highByte((uintptr_t)taskInfo);
 
   interrupts();
+  Serial.println(_tasks.Length());
 }
 
 void setup_timer() {
   _tasks[0].id = 0;
-
-  cli();
+  noInterrupts();
+  // Set CTC mode
   TCCR1A = 0;
-  TCCR1B = 0;
-  OCR1A = 0xF424 / 4;
-  TCCR1B = (1 << WGM12) | (1 << CS12);
+  TCCR1B = (1 << WGM12);
+
+  // Set prescaler to 64
+  TCCR1B |= (1 << CS11) | (1 << CS10);
+
+  // Set Output Compare Match Count for 1ms
+  OCR1A = 250;
+
+  // Enable Output Compare Match Interrupt
   TIMSK1 = (1 << OCIE1A);
-  sei();
+  interrupts();
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -201,10 +208,11 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 void TaskSwitcher::Setup() {
+  Serial.print("setup");
   setup_timer();
 }
 
-void TaskSwitcher::RunTask(Task::TaskDelegate& delegate, Task::TaskDelegate::Argument* arg, uint16_t stackSize) {
+void TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize) {
   run_task(delegate, arg, stackSize);
 }
 

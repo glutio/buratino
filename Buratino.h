@@ -18,6 +18,7 @@
 #define BURATINO_MIN_TASKS 10
 #endif
 
+struct TaskInfo;
 
 class Buratino {
 protected:
@@ -29,13 +30,13 @@ protected:
   Buratino();
  
 public:
-  static void RunTask(Task::TaskDelegate& task, Task::TaskDelegate::Argument* arg, int16_t stackSize = 128);
+  static void RunTask(BTask task, BTask::Argument* arg, int16_t stackSize = 128);
   static void AddDevice(IBuratinoDevice* device);
   static void Setup();
   static void Update();
   
   friend class Task;
-  friend void run_task(TaskInfo* taskInfo);
+  friend void task_wrapper(TaskInfo*);
 };
 
 #endif
