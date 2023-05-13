@@ -20,6 +20,7 @@ protected:
   void RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize);
   void Cleanup();
   void YieldTask();
+  void KillTask(uint8_t id);
   friend class Buratino;
 };
 

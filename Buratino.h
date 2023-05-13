@@ -35,6 +35,7 @@ public:
   static void Setup();
   static void Update();
   static void YieldTask();
+  static void KillTask(uint8_t id);
   
   friend class Task;
   friend void task_wrapper(TaskInfo*);

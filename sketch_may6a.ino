@@ -83,7 +83,7 @@ public:
     // Serial.println("task2");
     // Serial.flush();
     interrupts();
-    //Buratino::YieldTask();
+    Buratino::YieldTask();
     //delay(100);
     }
   }
@@ -93,6 +93,7 @@ public:
 
   void OnJoystickClick(Joystick* joystick, void*) {
     _scroll = !_scroll;
+    Buratino::KillTask(1);
   }
 
   void OnButtonClick(DigitalPin* pin, DigitalPinChangeArgs* args) {

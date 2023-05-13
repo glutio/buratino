@@ -25,6 +25,16 @@ int8_t get_task_id() {
   return current_task;
 }
 
+uint8_t disable() {
+  auto x = SREG;
+  noInterrupts();
+  return x;
+}
+
+void restore(uint8_t x) {
+  SREG = x;
+}
+
 // original work (C) by Michael Minor
 // https :  //github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
 void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
@@ -127,7 +137,61 @@ void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
 
   asm volatile("ret");
 }
-void task_wrapper(TaskInfo*);
+
+void* __attribute__((naked)) restore_context(uint8_t* newctx) {
+  // switch argument pointer
+  asm volatile("movw r30, r24");
+
+  // switch stacks
+  asm volatile("ldd r0, Z+32");
+  asm volatile("out __SP_L__, r0");
+  asm volatile("ldd r0, Z+33");
+  asm volatile("out __SP_H__, r0");
+
+  // restore registers
+  asm volatile("ldd r0, Z+31");
+  asm volatile("push r0");
+  asm volatile("ldd r0, Z+30");
+  asm volatile("push r0");
+  asm volatile("ldd r29, Z+29");
+  asm volatile("ldd r28, Z+28");
+  asm volatile("ldd r27, Z+27");
+  asm volatile("ldd r26, Z+26");
+  asm volatile("ldd r25, Z+25");
+  asm volatile("ldd r24, Z+24");
+  asm volatile("ldd r23, Z+23");
+  asm volatile("ldd r22, Z+22");
+  asm volatile("ldd r21, Z+21");
+  asm volatile("ldd r20, Z+20");
+  asm volatile("ldd r19, Z+19");
+  asm volatile("ldd r18, Z+18");
+  asm volatile("ldd r17, Z+17");
+  asm volatile("ldd r16, Z+16");
+  asm volatile("ldd r15, Z+15");
+  asm volatile("ldd r14, Z+14");
+  asm volatile("ldd r13, Z+13");
+  asm volatile("ldd r12, Z+12");
+  asm volatile("ldd r11, Z+11");
+  asm volatile("ldd r10, Z+10");
+  asm volatile("ldd r9, Z+9");
+  asm volatile("ldd r8, Z+8");
+  asm volatile("ldd r7, Z+7");
+  asm volatile("ldd r6, Z+6");
+  asm volatile("ldd r5, Z+5");
+  asm volatile("ldd r4, Z+4");
+  asm volatile("ldd r3, Z+3");
+  asm volatile("ldd r2, Z+2");
+  asm volatile("ldd r1, Z+1");
+  asm volatile("ldd r0, Z+34");      // SREG
+  asm volatile("out __SREG__, r0");  // may enable interrupts
+  asm volatile("ldd r0, Z+0");
+
+  asm volatile("pop r30");
+  asm volatile("pop r31");
+
+  asm volatile("ret");
+}
+
 void switch_task() {
   auto next_task = current_task;
   do {
@@ -141,39 +205,32 @@ void switch_task() {
   auto old_task = current_task;
   current_task = next_task;
 
-  // Serial.print(old_task);
-  // Serial.print(" ");
-  // Serial.println(next_task);
-  // for (auto i = 0; i < Ctx::size; i++) {
-  //   Serial.print(_tasks[next_task]->ctx[i], HEX);
-  //   Serial.print(" ");
-  // }
-  // Serial.println();
-  // for (auto i = 511; i > 511 - 16; i--) {
-  //   Serial.print(_tasks[next_task]->stack[i], HEX);
-  //   Serial.print(" ");
-  // }
-  // Serial.println();
-  // Serial.println((uintptr_t)task_wrapper, HEX);
-  // uint8_t* sp = (uint16_t)_tasks[next_task]->ctx[33] << 8 | _tasks[next_task]->ctx[32];
-  // uintptr_t x = (uint16_t) * (sp + 1) << 8 | *(sp + 2);
-  // Serial.println(x, HEX);
-//  Serial.flush();
+  // current task is killed free
+  if (_tasks[old_task]->id < 0) {
+    delete[] _tasks[old_task]->stack;
+    delete[] _tasks[old_task]->ctx;
+
+    restore_context(_tasks[next_task]->ctx);
+  }
+
   switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
-  // Serial.print("back ");
-  // Serial.println(current_task);
-  // Serial.flush();
 }
 
 void kill_task(uint8_t id) {
-  noInterrupts();
+  auto sreg = disable();
+  if (id > 0 && id < _tasks.Length() && _tasks[id]->id > 0) {
 
-  _tasks[id]->id = -1;
-  delete[] _tasks[id]->stack;
-  _tasks[id]->stack = 0;
+    _tasks[id]->id = -1;
 
-  switch_task();
-  // should not reach here
+    if (id != current_task) {
+      delete[] _tasks[id]->stack;
+      delete[] _tasks[id]->ctx;
+    } else {
+      switch_task();
+      // should not reach here
+    }
+  }
+  restore(sreg);
 }
 
 void task_wrapper(TaskInfo* taskInfo) {
@@ -187,7 +244,7 @@ void task_wrapper(TaskInfo* taskInfo) {
 }
 
 void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
-  noInterrupts();
+  auto sreg = disable();
   auto new_task = 0;
 
   while (_tasks[new_task]->id >= 0 && new_task < _tasks.Length()) ++new_task;
@@ -240,7 +297,7 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
 
   taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
 
-  interrupts();
+  restore(sreg);
 }
 
 void initialize() {
@@ -251,50 +308,18 @@ void initialize() {
 }
 
 void cleanup_tasks() {
-  noInterrupts();
+  auto sreg = disable();
   for (auto i = 0; i < _tasks.Length(); ++i) {
     if (_tasks[i]->id < 0 && _tasks[i]->ctx) {
       delete[] _tasks[i]->ctx;
       _tasks[i]->ctx = 0;
     }
   }
-  interrupts();
+  restore(sreg);
 }
 
 void setup_timer() {
   noInterrupts();
-
-  // TCCR1A = 0;  // set entire TCCR1A register to 0
-  // TCCR1B = 0;  // same for TCCR1B
-
-  // // set compare match register to desired timer count:
-  // OCR1A = 15624;
-  // // turn on CTC mode:
-  // TCCR1B |= (1 << WGM12);
-  // // Set CS10 and CS12 bits for 1024 prescaler:
-  // TCCR1B |= (1 << CS10);
-  // TCCR1B |= (1 << CS12);
-  // // enable timer compare interrupt:
-  // TIMSK1 |= (1 << OCIE1A);
-
-
-  // // Stop timer1
-  // TCCR1B = 0;
-
-  // // Clear timer1 counter
-  // TCNT1  = 0;
-
-  // // Set up timer with prescaler = 64 and CTC mode
-  // TCCR1B |= (1 << WGM12) | (1 << CS11) | (1 << CS10);
-
-  // // Initialize compare value
-  // // Tick frequency (f) is given by f = F_CPU / (Prescaler * (1 + OCR1A))
-  // // So for 1ms ticks, OCR1A = (F_CPU / (Prescaler * f)) - 1
-  // // Assuming F_CPU = 16MHz, Prescaler = 64 and f = 1000Hz (1ms ticks)
-  // OCR1A = (F_CPU / (64 * 1000)) - 1;
-
-  // // Enable compare interrupt
-  // TIMSK1 |= (1 << OCIE1A);
 
   TCCR1A = 0;  // set timer for normal operation
   TCCR1B = 0;  // clear register
@@ -309,9 +334,7 @@ void setup_timer() {
 }
 
 ISR(TIMER1_COMPA_vect) {
-  noInterrupts();
   switch_task();
-  interrupts();
 }
 
 TaskSwitcher::TaskSwitcher() {
@@ -319,9 +342,9 @@ TaskSwitcher::TaskSwitcher() {
 }
 
 void TaskSwitcher::YieldTask() {
-  noInterrupts();
+  auto sreg = disable();
   switch_task();
-  interrupts();
+  restore(sreg);
 }
 
 void TaskSwitcher::Setup() {
@@ -333,8 +356,11 @@ void TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackS
 }
 
 void TaskSwitcher::Cleanup() {
-  // cleanup_tasks();
+  //cleanup_tasks();
 }
 
+void TaskSwitcher::KillTask(uint8_t id) {
+  kill_task(id);
+}
 TaskInfoBase::TaskInfoBase()
   : id(-1), arg(0) {}
