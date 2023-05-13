@@ -211,6 +211,7 @@ void switch_task() {
     delete[] _tasks[old_task]->ctx;
 
     restore_context(_tasks[next_task]->ctx);
+    // never return here
   }
 
   switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
@@ -253,26 +254,19 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
     _tasks.Add(new TaskInfo());
   };
 
-  Serial.print(new_task);
-  Serial.print("_");
-  Serial.println(_tasks.Length());
-  Serial.flush();
-
   auto taskInfo = _tasks[new_task];
 
   taskInfo->id = new_task;
   taskInfo->delegate = task;
   taskInfo->arg = arg;
   taskInfo->stack = new uint8_t[stackSize];
+  taskInfo->ctx = new uint8_t[Ctx::size];
 
   // clear stack
   for (auto i = 0; i < stackSize; ++i) {
     taskInfo->stack[i] = 0;
   }
 
-  if (!taskInfo->ctx) {
-    taskInfo->ctx = new uint8_t[Ctx::size];
-  }
 
   // clear registers
   for (auto i = 0; i < Ctx::size; ++i) {
@@ -289,7 +283,7 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   // push task_wrapper address for `ret` to pop
   *sp-- = lowByte((uintptr_t)task_wrapper);
   *sp-- = highByte((uintptr_t)task_wrapper);
-  *sp-- = 0;
+  *sp-- = 0; // for devices with more than 128kb program memory
 
   // save the stack in the context
   taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);

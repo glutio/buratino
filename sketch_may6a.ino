@@ -94,6 +94,23 @@ public:
   void OnJoystickClick(Joystick* joystick, void*) {
     _scroll = !_scroll;
     Buratino::KillTask(1);
+    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 256);
+  }
+
+  void OnTimerTick(Buratino*, void*)
+  {
+    auto m = millis();
+    auto n = millis();
+    while(1)
+    {
+      m = millis();
+      delay(1);
+      n = millis() - m;
+      noInterrupts();
+      Serial.println(n);
+      Serial.flush();
+      interrupts();
+    }
   }
 
   void OnButtonClick(DigitalPin* pin, DigitalPinChangeArgs* args) {
