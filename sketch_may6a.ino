@@ -45,7 +45,7 @@ public:
     HAL::motion.OnChange = DigitalPin::ChangeEvent(this, &App::OnMotionChange);
     // HAL::pot.OnChange = AnalogPin::ChangeEvent(this, &App::OnBrightnessChange);
     // HAL::mic.OnChange = AnalogPin::ChangeEvent(this, &App::OnMicChange);
-
+    HAL::lc.shutdown(0, false);
   }
 
   void OnJoystickMove(Joystick* joystick, JoystickMoveArgs* args) {
@@ -66,6 +66,11 @@ public:
   }
 
   void Draw(Buratino*, void* pixel) {
+    noInterrupts();
+    Serial.println("task2");
+    Serial.flush();
+    interrupts();
+
     auto x = (int8_t)pixel % 8;
     auto y = (int8_t)pixel / 8;
 
@@ -76,7 +81,6 @@ public:
 
       HAL::lc.setLed(0, x, y, state);
 
-      delay(100);
     }
   }
 
@@ -131,15 +135,26 @@ void setup() {
   Buratino::AddDevice(&HAL::mic);
 
   for (auto i = 0; i < 1; ++i) {
-    Buratino::RunTask(BTask(&app, &App::Draw), (void*)i, 16);
+    Buratino::RunTask(BTask(&app, &App::Draw), (void*)i, 32);
   }
 
   Serial.println("done");
   Serial.flush();
-
   Buratino::Setup();
+  pinMode(6, OUTPUT);
+  digitalWrite(6, LOW);
+
 }
 
 void loop() {
   Buratino::Update();
+  noInterrupts();
+  //Buratino::YieldTask();
+  interrupts();
+
+  noInterrupts();
+  Serial.println("task1");
+  Serial.flush();
+  interrupts();
+  delay(100); 
 }

@@ -37,5 +37,12 @@ void Buratino::Update() {
         _instance._devices[i]->Update();
       }
     }
+
+    _taskSwitcher.Cleanup();
   }
+}
+
+void Buratino::YieldTask()
+{
+  _taskSwitcher.YieldTask();
 }

@@ -34,6 +34,7 @@ public:
   static void AddDevice(IBuratinoDevice* device);
   static void Setup();
   static void Update();
+  static void YieldTask();
   
   friend class Task;
   friend void task_wrapper(TaskInfo*);

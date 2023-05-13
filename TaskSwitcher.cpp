@@ -4,10 +4,20 @@
 #include "Buratino.h"
 #include "TaskSwitcher.h"
 
+enum Ctx
+{
+  spl = 32,
+  sph,
+  sreg,
+  size
+};
+
 struct TaskInfo : public TaskInfoBase {
   uint8_t* stack;
   uint8_t* sp;
   uint8_t* ctx;
+  TaskInfo()
+    : stack(0), sp(0), ctx(0) {}
 };
 
 List<TaskInfo*> _tasks(10);
@@ -19,7 +29,7 @@ int8_t get_task_id() {
 
 // original work (C) by Michael Minor
 // https :  //github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
-void __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
+void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
   // load oldctx to r31:r32
   asm volatile("push r31");
   asm volatile("push r30");
@@ -119,7 +129,7 @@ void __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
 
   asm volatile("ret");
 }
-
+void task_wrapper(TaskInfo*);
 void switch_task() {
   auto next_task = current_task;
   do {
@@ -130,24 +140,39 @@ void switch_task() {
     return;
   }
 
-  Serial.print(current_task);
-  Serial.print(" ");
-  Serial.println(next_task);
-  Serial.flush();
   auto old_task = current_task;
   current_task = next_task;
 
+  Serial.print(old_task);
+  Serial.print(" ");
+  Serial.println(next_task);
+  for (auto i = 0; i < Ctx::size; i++) {
+    Serial.print(_tasks[next_task]->ctx[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+  for (auto i = 511; i > 511 - 16; i--) {
+    Serial.print(_tasks[next_task]->stack[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+  Serial.println((uintptr_t)task_wrapper, HEX);
+  uint8_t* sp = (uint16_t)_tasks[next_task]->ctx[33] << 8 | _tasks[next_task]->ctx[32];
+  uintptr_t x = (uint16_t) * (sp + 1) << 8 | *(sp + 2);
+  Serial.println(x, HEX);
+  Serial.flush();
   switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
-
+  Serial.print("back ");
+  Serial.println(current_task);
+  Serial.flush();
 }
-
 
 void kill_task(uint8_t id) {
   noInterrupts();
 
   _tasks[id]->id = -1;
   delete[] _tasks[id]->stack;
-  delete[] _tasks[id]->ctx;
+  _tasks[id]->stack = 0;
 
   switch_task();
   // should not reach here
@@ -155,20 +180,28 @@ void kill_task(uint8_t id) {
 
 void task_wrapper(TaskInfo* taskInfo) {
   // get TaskInfo pointer from the stack
+  digitalWrite(6, HIGH);
+
+  taskInfo->delegate(&Buratino::_instance, taskInfo->arg);
   Serial.println("task wrapper");
   Serial.flush();
-  taskInfo->delegate(&Buratino::_instance, taskInfo->arg);
   kill_task(get_task_id());
 }
 
 void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   noInterrupts();
   auto new_task = 0;
+
   while (_tasks[new_task]->id >= 0 && new_task < _tasks.Length()) ++new_task;
 
   if (new_task == _tasks.Length()) {
     _tasks.Add(new TaskInfo());
   };
+
+  Serial.print(new_task);
+  Serial.print("_");
+  Serial.println(_tasks.Length());
+  Serial.flush();
 
   auto taskInfo = _tasks[new_task];
 
@@ -176,10 +209,18 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   taskInfo->delegate = task;
   taskInfo->arg = arg;
   taskInfo->stack = new uint8_t[stackSize];
-  taskInfo->ctx = new uint8_t[35];
+
+  // clear stack
+  for (auto i = 0; i < stackSize; ++i) {
+    taskInfo->stack[i] = 0;
+  }
+
+  if (!taskInfo->ctx) {
+    taskInfo->ctx = new uint8_t[Ctx::size];
+  }
 
   // clear registers
-  for (auto i = 0; i < 35; ++i) {
+  for (auto i = 0; i < Ctx::size; ++i) {
     taskInfo->ctx[i] = 0;
   }
 
@@ -187,18 +228,20 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   taskInfo->ctx[24] = lowByte((uintptr_t)taskInfo);   // r24
   taskInfo->ctx[25] = highByte((uintptr_t)taskInfo);  // r25
 
-  auto sp = &taskInfo->stack[stackSize - 1];
+  uint8_t* sp = &taskInfo->stack[stackSize - 1];
   *sp-- = 0xAA;  // magic number indicating bottom of stack
 
   // push task_wrapper address for `ret` to pop
   *sp-- = lowByte((uintptr_t)task_wrapper);
   *sp-- = highByte((uintptr_t)task_wrapper);
+  *sp-- = 0;
 
   // save the stack in the context
-  taskInfo->ctx[32] = lowByte((uintptr_t)sp);
-  taskInfo->ctx[33] = highByte((uintptr_t)sp);
+  taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);
+  taskInfo->ctx[Ctx::sph] = highByte((uintptr_t)sp);
 
-  taskInfo->ctx[34] = 0x80;  // SREG
+  taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
+  taskInfo->sp = sp;
 
   interrupts();
 }
@@ -206,35 +249,70 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
 void initialize() {
   // add the initial loop() task
   _tasks.Add(new TaskInfo());
-  _tasks[0]->ctx = new uint8_t[35];
   _tasks[0]->id = 0;
+  _tasks[0]->ctx = new uint8_t[Ctx::size];
+}
+
+void cleanup_tasks() {
+  noInterrupts();
+  for (auto i = 0; i < _tasks.Length(); ++i) {
+    if (_tasks[i]->id < 0 && _tasks[i]->ctx) {
+      delete[] _tasks[i]->ctx;
+      _tasks[i]->ctx = 0;
+    }
+  }
+  interrupts();
 }
 
 void setup_timer() {
   noInterrupts();
 
-  // Set CTC mode
-  TCCR1A = 0;
-  TCCR1B = (1 << WGM12);
+  TCCR1A = 0;  // set entire TCCR1A register to 0
+  TCCR1B = 0;  // same for TCCR1B
 
-  // Set prescaler to 64
-  TCCR1B |= (1 << CS11) | (1 << CS10);
+  // set compare match register to desired timer count:
+  OCR1A = 15624;
+  // turn on CTC mode:
+  TCCR1B |= (1 << WGM12);
+  // Set CS10 and CS12 bits for 1024 prescaler:
+  TCCR1B |= (1 << CS10);
+  TCCR1B |= (1 << CS12);
+  // enable timer compare interrupt:
+  TIMSK1 |= (1 << OCIE1A);
 
-  // Set Output Compare Match Count for 1ms
-  OCR1A = 250;
 
-  // Enable Output Compare Match Interrupt
-  TIMSK1 = (1 << OCIE1A);
+  // // Set CTC mode
+  // TCCR1A = 0;
+  // TCCR1B = (1 << WGM12);
+
+  // // Set prescaler to 64
+  // TCCR1B |= (1 << CS11) | (1 << CS10);
+
+  // // Set Output Compare Match Count for 1ms
+  // OCR1A = 250;
+
+  // // Enable Output Compare Match Interrupt
+  // TIMSK1 = (1 << OCIE1A);
+
+
+
   interrupts();
 }
 
 ISR(TIMER1_COMPA_vect) {
+  noInterrupts();
   switch_task();
+  interrupts();
 }
 
-TaskSwitcher::TaskSwitcher() 
-{
+TaskSwitcher::TaskSwitcher() {
   initialize();
+}
+
+void TaskSwitcher::YieldTask() {
+  noInterrupts();
+  switch_task();
+  interrupts(); 
 }
 
 void TaskSwitcher::Setup() {
@@ -243,6 +321,10 @@ void TaskSwitcher::Setup() {
 
 void TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize) {
   run_task(delegate, arg, stackSize);
+}
+
+void TaskSwitcher::Cleanup() {
+  cleanup_tasks();
 }
 
 TaskInfoBase::TaskInfoBase()
