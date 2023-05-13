@@ -15,6 +15,7 @@ struct TaskInfoBase {
 
 class TaskSwitcher {
 protected:
+  TaskSwitcher();
   void Setup();
   void RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize);
 

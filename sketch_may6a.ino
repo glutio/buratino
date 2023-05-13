@@ -130,7 +130,7 @@ void setup() {
   Buratino::AddDevice(&HAL::joystick);
   Buratino::AddDevice(&HAL::mic);
 
-  for (auto i = 0; i < 64; ++i) {
+  for (auto i = 0; i < 1; ++i) {
     Buratino::RunTask(BTask(&app, &App::Draw), (void*)i, 16);
   }
 
@@ -142,5 +142,4 @@ void setup() {
 
 void loop() {
   Buratino::Update();
-  Serial.println("loop");
 }
