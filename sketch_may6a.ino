@@ -66,21 +66,25 @@ public:
   }
 
   void Draw(Buratino*, void* pixel) {
-    noInterrupts();
-    Serial.println("task2");
-    Serial.flush();
-    interrupts();
+    // noInterrupts();
+    // Serial.println("task2");
+    // Serial.flush();
+    // interrupts();
 
     auto x = (int8_t)pixel % 8;
     auto y = (int8_t)pixel / 8;
 
     while (1) {
+    noInterrupts();
       auto i = (_offset + y) % sizeof(heart);
-      auto h = _shift < 0 ? heart[x] << -_shift : heart[x] >> _shift;
+      auto h = _shift < 0 ? heart[i] << -_shift : heart[i] >> _shift;
       auto state = h & (1 << x);
-
-      HAL::lc.setLed(0, x, y, state);
-
+      HAL::lc.setLed(0, 8-x-1, 8-y-1, state);      
+    // Serial.println("task2");
+    // Serial.flush();
+    interrupts();
+    //Buratino::YieldTask();
+    //delay(100);
     }
   }
 
@@ -134,27 +138,27 @@ void setup() {
   Buratino::AddDevice(&HAL::joystick);
   Buratino::AddDevice(&HAL::mic);
 
-  for (auto i = 0; i < 1; ++i) {
-    Buratino::RunTask(BTask(&app, &App::Draw), (void*)i, 32);
+  auto task = BTask(&app, &App::Draw);
+  for (auto i = 0; i < 64; ++i) {
+    Buratino::RunTask(task, (void*)i, 56);
   }
 
   Serial.println("done");
   Serial.flush();
-  Buratino::Setup();
   pinMode(6, OUTPUT);
   digitalWrite(6, LOW);
-
+  Buratino::Setup();
 }
 
 void loop() {
   Buratino::Update();
-  noInterrupts();
-  //Buratino::YieldTask();
-  interrupts();
+  // noInterrupts();
+  // //Buratino::YieldTask();
+  // interrupts();
 
-  noInterrupts();
-  Serial.println("task1");
-  Serial.flush();
-  interrupts();
+  // noInterrupts();
+  // Serial.println("task1");
+  // Serial.flush();
+  // interrupts();
   delay(100); 
 }

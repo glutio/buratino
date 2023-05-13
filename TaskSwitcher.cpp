@@ -4,8 +4,7 @@
 #include "Buratino.h"
 #include "TaskSwitcher.h"
 
-enum Ctx
-{
+enum Ctx {
   spl = 32,
   sph,
   sreg,
@@ -14,13 +13,12 @@ enum Ctx
 
 struct TaskInfo : public TaskInfoBase {
   uint8_t* stack;
-  uint8_t* sp;
   uint8_t* ctx;
   TaskInfo()
-    : stack(0), sp(0), ctx(0) {}
+    : stack(0), ctx(0) {}
 };
 
-List<TaskInfo*> _tasks(10);
+List<TaskInfo*> _tasks(65);
 int8_t current_task = 0;
 
 int8_t get_task_id() {
@@ -143,28 +141,28 @@ void switch_task() {
   auto old_task = current_task;
   current_task = next_task;
 
-  Serial.print(old_task);
-  Serial.print(" ");
-  Serial.println(next_task);
-  for (auto i = 0; i < Ctx::size; i++) {
-    Serial.print(_tasks[next_task]->ctx[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-  for (auto i = 511; i > 511 - 16; i--) {
-    Serial.print(_tasks[next_task]->stack[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-  Serial.println((uintptr_t)task_wrapper, HEX);
-  uint8_t* sp = (uint16_t)_tasks[next_task]->ctx[33] << 8 | _tasks[next_task]->ctx[32];
-  uintptr_t x = (uint16_t) * (sp + 1) << 8 | *(sp + 2);
-  Serial.println(x, HEX);
-  Serial.flush();
+  // Serial.print(old_task);
+  // Serial.print(" ");
+  // Serial.println(next_task);
+  // for (auto i = 0; i < Ctx::size; i++) {
+  //   Serial.print(_tasks[next_task]->ctx[i], HEX);
+  //   Serial.print(" ");
+  // }
+  // Serial.println();
+  // for (auto i = 511; i > 511 - 16; i--) {
+  //   Serial.print(_tasks[next_task]->stack[i], HEX);
+  //   Serial.print(" ");
+  // }
+  // Serial.println();
+  // Serial.println((uintptr_t)task_wrapper, HEX);
+  // uint8_t* sp = (uint16_t)_tasks[next_task]->ctx[33] << 8 | _tasks[next_task]->ctx[32];
+  // uintptr_t x = (uint16_t) * (sp + 1) << 8 | *(sp + 2);
+  // Serial.println(x, HEX);
+//  Serial.flush();
   switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
-  Serial.print("back ");
-  Serial.println(current_task);
-  Serial.flush();
+  // Serial.print("back ");
+  // Serial.println(current_task);
+  // Serial.flush();
 }
 
 void kill_task(uint8_t id) {
@@ -241,7 +239,6 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   taskInfo->ctx[Ctx::sph] = highByte((uintptr_t)sp);
 
   taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
-  taskInfo->sp = sp;
 
   interrupts();
 }
@@ -267,34 +264,46 @@ void cleanup_tasks() {
 void setup_timer() {
   noInterrupts();
 
-  TCCR1A = 0;  // set entire TCCR1A register to 0
-  TCCR1B = 0;  // same for TCCR1B
+  // TCCR1A = 0;  // set entire TCCR1A register to 0
+  // TCCR1B = 0;  // same for TCCR1B
 
-  // set compare match register to desired timer count:
-  OCR1A = 15624;
-  // turn on CTC mode:
-  TCCR1B |= (1 << WGM12);
-  // Set CS10 and CS12 bits for 1024 prescaler:
-  TCCR1B |= (1 << CS10);
-  TCCR1B |= (1 << CS12);
-  // enable timer compare interrupt:
-  TIMSK1 |= (1 << OCIE1A);
-
-
-  // // Set CTC mode
-  // TCCR1A = 0;
-  // TCCR1B = (1 << WGM12);
-
-  // // Set prescaler to 64
-  // TCCR1B |= (1 << CS11) | (1 << CS10);
-
-  // // Set Output Compare Match Count for 1ms
-  // OCR1A = 250;
-
-  // // Enable Output Compare Match Interrupt
-  // TIMSK1 = (1 << OCIE1A);
+  // // set compare match register to desired timer count:
+  // OCR1A = 15624;
+  // // turn on CTC mode:
+  // TCCR1B |= (1 << WGM12);
+  // // Set CS10 and CS12 bits for 1024 prescaler:
+  // TCCR1B |= (1 << CS10);
+  // TCCR1B |= (1 << CS12);
+  // // enable timer compare interrupt:
+  // TIMSK1 |= (1 << OCIE1A);
 
 
+  // // Stop timer1
+  // TCCR1B = 0;
+
+  // // Clear timer1 counter
+  // TCNT1  = 0;
+
+  // // Set up timer with prescaler = 64 and CTC mode
+  // TCCR1B |= (1 << WGM12) | (1 << CS11) | (1 << CS10);
+
+  // // Initialize compare value
+  // // Tick frequency (f) is given by f = F_CPU / (Prescaler * (1 + OCR1A))
+  // // So for 1ms ticks, OCR1A = (F_CPU / (Prescaler * f)) - 1
+  // // Assuming F_CPU = 16MHz, Prescaler = 64 and f = 1000Hz (1ms ticks)
+  // OCR1A = (F_CPU / (64 * 1000)) - 1;
+
+  // // Enable compare interrupt
+  // TIMSK1 |= (1 << OCIE1A);
+
+  TCCR1A = 0;  // set timer for normal operation
+  TCCR1B = 0;  // clear register
+  TCNT1 = 0;   // zero timer
+
+  OCR1A = 16000 - 1;        // load compare register: 16MHz/1/1000Hz = 16000 - 1 (for 1ms tick)
+  TCCR1B |= (1 << WGM12);   // CTC mode, no prescaler: CS12 = 0 and CS10 = 1
+  TCCR1B |= (1 << CS10);    // set prescaler to 1
+  TIMSK1 |= (1 << OCIE1A);  // enable compare match interrupt
 
   interrupts();
 }
@@ -312,7 +321,7 @@ TaskSwitcher::TaskSwitcher() {
 void TaskSwitcher::YieldTask() {
   noInterrupts();
   switch_task();
-  interrupts(); 
+  interrupts();
 }
 
 void TaskSwitcher::Setup() {
@@ -324,7 +333,7 @@ void TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackS
 }
 
 void TaskSwitcher::Cleanup() {
-  cleanup_tasks();
+  // cleanup_tasks();
 }
 
 TaskInfoBase::TaskInfoBase()
