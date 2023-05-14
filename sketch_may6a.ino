@@ -94,7 +94,7 @@ public:
   void OnJoystickClick(Joystick* joystick, void*) {
     _scroll = !_scroll;
     Buratino::KillTask(1);
-    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 256);
+    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 128);
   }
 
   void OnTimerTick(Buratino*, void*)
@@ -165,7 +165,7 @@ void setup() {
   Serial.flush();
   pinMode(6, OUTPUT);
   digitalWrite(6, LOW);
-  Buratino::Setup();
+  Buratino::Setup(64);
 }
 
 void loop() {

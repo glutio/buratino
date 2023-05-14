@@ -32,10 +32,10 @@ protected:
 public:
   static void RunTask(BTask task, BTask::Argument* arg, int16_t stackSize = 128);
   static void AddDevice(IBuratinoDevice* device);
-  static void Setup();
+  static void Setup(int8_t tasks);
   static void Update();
   static void YieldTask();
-  static void KillTask(uint8_t id);
+  static void KillTask(int8_t id);
   
   friend class Task;
   friend void task_wrapper(TaskInfo*);

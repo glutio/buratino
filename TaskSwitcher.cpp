@@ -11,19 +11,13 @@ enum Ctx {
   size
 };
 
-struct TaskInfo : public TaskInfoBase {
+struct TaskInfo : TaskInfoBase {
   uint8_t* stack;
   uint8_t* ctx;
-  TaskInfo()
-    : stack(0), ctx(0) {}
 };
 
-List<TaskInfo*> _tasks(65);
+List<TaskInfo*> _tasks;
 int8_t current_task = 0;
-
-int8_t get_task_id() {
-  return current_task;
-}
 
 uint8_t disable() {
   auto x = SREG;
@@ -33,6 +27,13 @@ uint8_t disable() {
 
 void restore(uint8_t x) {
   SREG = x;
+}
+
+void free_task(int8_t id) {
+  delete[] _tasks[id]->stack;
+  delete[] _tasks[id]->ctx;
+  delete _tasks[id];
+  _tasks[id] = 0;
 }
 
 // original work (C) by Michael Minor
@@ -192,11 +193,12 @@ void* __attribute__((naked)) restore_context(uint8_t* newctx) {
   asm volatile("ret");
 }
 
+
 void switch_task() {
   auto next_task = current_task;
   do {
     next_task = (next_task + 1) % _tasks.Length();
-  } while (_tasks[next_task]->id < 0);
+  } while (!_tasks[next_task] || _tasks[next_task]->id < 0);
 
   if (next_task == current_task) {
     return;
@@ -205,11 +207,9 @@ void switch_task() {
   auto old_task = current_task;
   current_task = next_task;
 
-  // current task is killed free
+  // if current task is killed free its memory
   if (_tasks[old_task]->id < 0) {
-    delete[] _tasks[old_task]->stack;
-    delete[] _tasks[old_task]->ctx;
-
+    free_task(old_task);
     restore_context(_tasks[next_task]->ctx);
     // never return here
   }
@@ -217,16 +217,13 @@ void switch_task() {
   switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
 }
 
-void kill_task(uint8_t id) {
+void kill_task(int8_t id) {
   auto sreg = disable();
-  if (id > 0 && id < _tasks.Length() && _tasks[id]->id > 0) {
-
-    _tasks[id]->id = -1;
-
+  if (id > 0 && id < _tasks.Length() && _tasks[id]) {
     if (id != current_task) {
-      delete[] _tasks[id]->stack;
-      delete[] _tasks[id]->ctx;
+      free_task(id);
     } else {
+      _tasks[id]->id = -1;
       switch_task();
       // should not reach here
     }
@@ -235,24 +232,24 @@ void kill_task(uint8_t id) {
 }
 
 void task_wrapper(TaskInfo* taskInfo) {
-  // get TaskInfo pointer from the stack
-  digitalWrite(6, HIGH);
-
   taskInfo->delegate(&Buratino::_instance, taskInfo->arg);
-  Serial.println("task wrapper");
-  Serial.flush();
-  kill_task(get_task_id());
+  disable();
+  kill_task(current_task);
 }
 
 void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   auto sreg = disable();
   auto new_task = 0;
 
-  while (_tasks[new_task]->id >= 0 && new_task < _tasks.Length()) ++new_task;
+  while (_tasks[new_task] && new_task < _tasks.Length()) {
+    ++new_task;
+  }
 
   if (new_task == _tasks.Length()) {
     _tasks.Add(new TaskInfo());
-  };
+  } else {
+    _tasks[new_task] = new TaskInfo();
+  }
 
   auto taskInfo = _tasks[new_task];
 
@@ -266,7 +263,6 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   for (auto i = 0; i < stackSize; ++i) {
     taskInfo->stack[i] = 0;
   }
-
 
   // clear registers
   for (auto i = 0; i < Ctx::size; ++i) {
@@ -283,7 +279,7 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   // push task_wrapper address for `ret` to pop
   *sp-- = lowByte((uintptr_t)task_wrapper);
   *sp-- = highByte((uintptr_t)task_wrapper);
-  *sp-- = 0; // for devices with more than 128kb program memory
+  *sp-- = 0;  // for devices with more than 128kb program memory
 
   // save the stack in the context
   taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);
@@ -294,22 +290,13 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   restore(sreg);
 }
 
-void initialize() {
+void initialize(int8_t tasks) {
+  _tasks.Resize(tasks + 1);  // 1 for main loop()
+  
   // add the initial loop() task
   _tasks.Add(new TaskInfo());
   _tasks[0]->id = 0;
   _tasks[0]->ctx = new uint8_t[Ctx::size];
-}
-
-void cleanup_tasks() {
-  auto sreg = disable();
-  for (auto i = 0; i < _tasks.Length(); ++i) {
-    if (_tasks[i]->id < 0 && _tasks[i]->ctx) {
-      delete[] _tasks[i]->ctx;
-      _tasks[i]->ctx = 0;
-    }
-  }
-  restore(sreg);
 }
 
 void setup_timer() {
@@ -332,7 +319,6 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 TaskSwitcher::TaskSwitcher() {
-  initialize();
 }
 
 void TaskSwitcher::YieldTask() {
@@ -341,7 +327,8 @@ void TaskSwitcher::YieldTask() {
   restore(sreg);
 }
 
-void TaskSwitcher::Setup() {
+void TaskSwitcher::Setup(int8_t tasks) {
+  initialize(tasks);
   setup_timer();
 }
 
@@ -349,12 +336,9 @@ void TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackS
   run_task(delegate, arg, stackSize);
 }
 
-void TaskSwitcher::Cleanup() {
-  //cleanup_tasks();
-}
-
-void TaskSwitcher::KillTask(uint8_t id) {
+void TaskSwitcher::KillTask(int8_t id) {
   kill_task(id);
 }
+
 TaskInfoBase::TaskInfoBase()
   : id(-1), arg(0) {}

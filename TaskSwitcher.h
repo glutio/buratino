@@ -16,11 +16,10 @@ struct TaskInfoBase {
 class TaskSwitcher {
 protected:
   TaskSwitcher();
-  void Setup();
+  void Setup(int8_t tasks);
   void RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize);
-  void Cleanup();
   void YieldTask();
-  void KillTask(uint8_t id);
+  void KillTask(int8_t id);
   friend class Buratino;
 };
 
