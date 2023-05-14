@@ -72,15 +72,26 @@ private:
   };
 
   template<typename TClass>
-  struct CallableImpl : public Callable {
+  struct CallableMethodImpl : public Callable {
     TClass* _instance;
     void (TClass::*_method)(TSender*, TArgument*);
 
-    CallableImpl(TClass* instance, void (TClass::*method)(TSender*, TArgument*))
+    CallableMethodImpl(TClass* instance, void (TClass::*method)(TSender*, TArgument*))
       : _instance(instance), _method(method) {}
 
     void Call(TSender* sender, TArgument* argument) {
       (_instance->*_method)(sender, argument);
+    }
+  };
+
+  struct CallableFunctionImpl : public Callable {
+    void (*_method)(TSender*, TArgument*);
+
+    CallableFunctionImpl(void (*method)(TSender*, TArgument*))
+      : _method(method) {}
+
+    void Call(TSender* sender, TArgument* argument) {
+      (_method)(sender, argument);
     }
   };
 
@@ -90,10 +101,13 @@ protected:
 public:
   typedef TSender Sender;
   typedef TArgument Argument;
-  
+
   template<typename TClass>
   EventDelegate(const TClass* instance, void (TClass::*method)(TSender* sender, TArgument* argument))
-    : _callable(new CallableImpl<TClass>(instance, method)) {}
+    : _callable(new CallableMethodImpl<TClass>(instance, method)) {}
+
+  EventDelegate(void (*function)(TSender* sender, TArgument* argument))
+    : _callable(new CallableFunctionImpl(function)) {}
 
   EventDelegate()
     : _callable(0) {}
@@ -107,32 +121,5 @@ public:
     }
   }
 };
-
-    // class Button {
-    // public:
-    //   typedef EventSource<Button, ButtonClickArgs> ClickEvent;
-    //   ClickEvent OnClick;
-    // protected:
-    //   RaiseClick() {
-    //     ButtonClickArgs args(...);
-    //     OnClick(this, &args)
-    //   }
-    // }
-
-    // class App {
-    // public:
-    //   App(Button* button) {
-    //     button->OnClick = Button::ClickEvent(this, &App::ClickHandler)
-    //   }
-
-    //   void ClickHandler(Button* button, ButtonClickArgs args) {
-    //     ...
-    //   }
-    // }
-
-template<template<typename, typename> typename TEvent, typename TClass, typename TMethod>
-TEvent<TClass, TMethod> BindEvent(TClass* instance, TMethod method) {
-  return TEvent<TClass, TMethod>(instance, method);
-}
 
 #endif
