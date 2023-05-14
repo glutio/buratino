@@ -23,6 +23,7 @@ public:
   static void YieldTask();
   static void KillTask(int8_t id); 
   static void Start();
+  static int8_t CurrentTask();
 };
 
 #endif

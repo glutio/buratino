@@ -14,6 +14,7 @@ protected:
   int8_t RunTask(BTask delegate, BTask::ArgumentType* arg, uint16_t stackSize);
   void YieldTask();
   void KillTask(int8_t id);
+  int8_t CurrentTask();
   friend class Buratino;
 };
 

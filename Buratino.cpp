@@ -34,3 +34,7 @@ void Buratino::YieldTask() {
 void Buratino::KillTask(int8_t id) {
   _taskSwitcher.KillTask(id);
 }
+
+int8_t Buratino::CurrentTask() {
+  return _taskSwitcher.CurrentTask();
+}

@@ -89,10 +89,17 @@ public:
   void OnMicChange(BAnalogPin*, BAnalogPinChangeArgs* args) {
   }
 
-  void OnJoystickClick(BJoystick* joystick, void*) {    
+  void OnJoystickClick(BJoystick* joystick, void*) {
+    static auto task = BTask(this, &App::Draw);
     _scroll = !_scroll;
-    Buratino::KillTask(1);
-    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 256);
+    if (!_scroll) {
+      Buratino::KillTask(1);
+    }
+    else
+    {
+      Buratino::RunTask(task, 0, 56);    
+    }
+      //Serial.print(9);
   }
 
   void OnTimerTick(Buratino*, void*) {

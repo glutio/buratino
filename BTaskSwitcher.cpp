@@ -45,6 +45,13 @@ void free_task(int8_t id) {
   _tasks[id] = 0;
 }
 
+int8_t current_task_id() {
+  auto sreg = disable();
+  auto id = current_task;
+  restore(sreg);
+  return id;
+}
+
 // original work (C) by Michael Minor
 // https://github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
 void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
@@ -255,8 +262,8 @@ int8_t run_task(BTask& task, BTask::ArgumentType* arg, uint16_t stackSize) {
 
   taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
 
+  Serial.print(new_task);
   restore(sreg);
-
   return new_task;
 }
 
@@ -308,4 +315,8 @@ void BTaskSwitcher::KillTask(int8_t id) {
 
 void BTaskSwitcher::YieldTask() {
   yield_task();
+}
+
+int8_t BTaskSwitcher::CurrentTask() {
+  return current_task_id();
 }
