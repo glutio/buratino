@@ -12,8 +12,8 @@ enum Ctx {
 };
 
 struct TaskInfo : TaskInfoBase {
-  uint8_t* stack;
-  uint8_t* ctx;
+  uint8_t ctx[Ctx::size];
+  uint8_t stack[1];
 };
 
 List<TaskInfo*> _tasks;
@@ -29,10 +29,13 @@ void restore(uint8_t x) {
   SREG = x;
 }
 
+TaskInfo* alloc_task(int16_t stackSize) {
+  auto taskInfo = (TaskInfo*)(new uint8_t[sizeof(TaskInfo) + (stackSize - 1)]);
+  return taskInfo;
+}
+
 void free_task(int8_t id) {
-  delete[] _tasks[id]->stack;
-  delete[] _tasks[id]->ctx;
-  delete _tasks[id];
+  delete[](uint8_t*) _tasks[id];
   _tasks[id] = 0;
 }
 
@@ -133,6 +136,7 @@ void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
   asm volatile("ldd r0, Z+34");      // SREG
   asm volatile("out __SREG__, r0");  // may enable interrupts
   asm volatile("ldd r0, Z+0");
+
   asm volatile("pop r30");
   asm volatile("pop r31");
 
@@ -193,7 +197,6 @@ void* __attribute__((naked)) restore_context(uint8_t* newctx) {
   asm volatile("ret");
 }
 
-
 void switch_task() {
   auto next_task = current_task;
   do {
@@ -211,10 +214,11 @@ void switch_task() {
   if (_tasks[old_task]->id < 0) {
     free_task(old_task);
     restore_context(_tasks[next_task]->ctx);
-    // never return here
+    // never returns here
   }
 
   switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
+  // current task switches back here
 }
 
 void kill_task(int8_t id) {
@@ -240,29 +244,20 @@ void task_wrapper(TaskInfo* taskInfo) {
 int8_t run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   auto sreg = disable();
   auto new_task = 0;
-
-  while (_tasks[new_task] && new_task < _tasks.Length()) {
+  while (new_task < _tasks.Length() && _tasks[new_task]) {
     ++new_task;
   }
 
+  auto taskInfo = alloc_task(stackSize);
   if (new_task == _tasks.Length()) {
-    _tasks.Add(new TaskInfo());
+    _tasks.Add(taskInfo);
   } else {
-    _tasks[new_task] = new TaskInfo();
+    _tasks[new_task] = taskInfo;
   }
-
-  auto taskInfo = _tasks[new_task];
 
   taskInfo->id = new_task;
   taskInfo->delegate = task;
   taskInfo->arg = arg;
-  taskInfo->stack = new uint8_t[stackSize];
-  taskInfo->ctx = new uint8_t[Ctx::size];
-
-  // clear stack
-  for (auto i = 0; i < stackSize; ++i) {
-    taskInfo->stack[i] = 0;
-  }
 
   // clear registers
   for (auto i = 0; i < Ctx::size; ++i) {
@@ -295,9 +290,8 @@ void initialize(int8_t tasks) {
   _tasks.Resize(tasks + 1);  // 1 for main loop()
 
   // add the initial loop() task
-  _tasks.Add(new TaskInfo());
+  _tasks.Add(alloc_task(1));  // loop() already has a stack
   _tasks[0]->id = 0;
-  _tasks[0]->ctx = new uint8_t[Ctx::size];
 }
 
 void setup_timer() {
@@ -330,8 +324,12 @@ void TaskSwitcher::YieldTask() {
 
 void TaskSwitcher::Setup(int8_t tasks) {
   initialize(tasks);
+}
+
+void TaskSwitcher::Start() {
   setup_timer();
 }
+
 
 int8_t TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize) {
   run_task(delegate, arg, stackSize);
@@ -340,6 +338,3 @@ int8_t TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stac
 void TaskSwitcher::KillTask(int8_t id) {
   kill_task(id);
 }
-
-TaskInfoBase::TaskInfoBase()
-  : id(-1), arg(0) {}

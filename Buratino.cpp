@@ -15,6 +15,9 @@ void Buratino::AddDevice(IBuratinoDevice* device) {
 }
 
 int8_t Buratino::RunTask(BTask task, BTask::Argument* arg, int16_t stackSize) {
+  if (!_instance._initialized) {
+    return -1;
+  }
   return _taskSwitcher.RunTask(task, arg, stackSize);
 }
 
@@ -25,8 +28,9 @@ void Buratino::Setup(int8_t tasks) {
         _instance._devices[i]->Setup();
       }
     }
-    _instance._taskSwitcher.Setup(tasks);
+    _instance._taskSwitcher.Setup(tasks);    
     _instance._initialized = true;
+    _instance._taskSwitcher.Start();
   }
 }
 

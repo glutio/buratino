@@ -10,13 +10,13 @@ struct TaskInfoBase {
   int8_t id;
   BTask::Argument* arg;
   BTask delegate;
-  TaskInfoBase();
 };
 
 class TaskSwitcher {
 protected:
   TaskSwitcher();
   void Setup(int8_t tasks);
+  void Start();
   int8_t RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize);
   void YieldTask();
   void KillTask(int8_t id);

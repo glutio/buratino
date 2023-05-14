@@ -1,4 +1,3 @@
-
 #include <LedControl.h>
 #include "Heart.h"
 #include "Buratino.h"
@@ -94,7 +93,7 @@ public:
   void OnJoystickClick(Joystick* joystick, void*) {
     _scroll = !_scroll;
     Buratino::KillTask(1);
-    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 128);
+    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 148);
   }
 
   void OnTimerTick(Buratino*, void*)
@@ -106,10 +105,10 @@ public:
       m = millis();
       delay(1);
       n = millis() - m;
-      // noInterrupts();
-      // Serial.println(n);
-      // Serial.flush();
-      // interrupts();
+      noInterrupts();
+      Serial.print(n);
+      Serial.flush();
+      interrupts();
     }
   }
 
@@ -120,6 +119,7 @@ public:
   }
 
   void OnMotionChange(DigitalPin* pin, DigitalPinChangeArgs* args) {
+    noInterrupts();
     if (args->value) {
       _offset = 0;
       if (!_scroll) {
@@ -130,6 +130,7 @@ public:
       HAL::lc.clearDisplay(0);
       HAL::lc.shutdown(0, true);
     }
+    interrupts();
   }
 
   void OnBrightnessChange(AnalogPin* pin, AnalogPinChangeArgs* args) {
@@ -148,6 +149,8 @@ App app;
 
 void setup() {
   Serial.begin(115200);
+  Buratino::Setup(64);
+
 
 
   Buratino::AddDevice(&HAL::button);
@@ -161,11 +164,11 @@ void setup() {
     Buratino::RunTask(task, (void*)i, 56);
   }
 
+  Serial.println();
   Serial.println("done");
   Serial.flush();
   pinMode(6, OUTPUT);
   digitalWrite(6, LOW);
-  Buratino::Setup(64);
 }
 
 void loop() {
