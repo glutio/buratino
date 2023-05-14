@@ -47,10 +47,22 @@ void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
   asm volatile("push r30");
   asm volatile("movw r30, r24");
 
+  // jump to Restore if oldctx is null
+  asm volatile("push r0");
+  asm volatile("push r1");
+  asm volatile("in r0, __SREG__");
+  asm volatile("cli");
+  asm volatile("EOR r1, r1");
+  asm volatile("cp ZL, r1");
+  asm volatile("cpc ZH, r1");  
+  asm volatile("breq Restore");
+  asm volatile("out __SREG__, r0");
+  asm volatile("pop r1");
+  asm volatile("pop r0");
+
   // save registers to oldctx
   asm volatile("std Z+0, r0");
   asm volatile("in r0, __SREG__");
-  asm volatile("cli");
   asm volatile("std Z+34, r0");
   asm volatile("std Z+1, r1");
   asm volatile("std Z+2, r2");
@@ -90,62 +102,10 @@ void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
   asm volatile("in r0, __SP_H__");
   asm volatile("std Z+33, r0");
 
+  asm volatile("Restore:");
+
   // switch argument pointer
   asm volatile("movw r30, r22");
-
-  // switch stacks
-  asm volatile("ldd r0, Z+32");
-  asm volatile("out __SP_L__, r0");
-  asm volatile("ldd r0, Z+33");
-  asm volatile("out __SP_H__, r0");
-
-  // restore registers
-  asm volatile("ldd r0, Z+31");
-  asm volatile("push r0");
-  asm volatile("ldd r0, Z+30");
-  asm volatile("push r0");
-  asm volatile("ldd r29, Z+29");
-  asm volatile("ldd r28, Z+28");
-  asm volatile("ldd r27, Z+27");
-  asm volatile("ldd r26, Z+26");
-  asm volatile("ldd r25, Z+25");
-  asm volatile("ldd r24, Z+24");
-  asm volatile("ldd r23, Z+23");
-  asm volatile("ldd r22, Z+22");
-  asm volatile("ldd r21, Z+21");
-  asm volatile("ldd r20, Z+20");
-  asm volatile("ldd r19, Z+19");
-  asm volatile("ldd r18, Z+18");
-  asm volatile("ldd r17, Z+17");
-  asm volatile("ldd r16, Z+16");
-  asm volatile("ldd r15, Z+15");
-  asm volatile("ldd r14, Z+14");
-  asm volatile("ldd r13, Z+13");
-  asm volatile("ldd r12, Z+12");
-  asm volatile("ldd r11, Z+11");
-  asm volatile("ldd r10, Z+10");
-  asm volatile("ldd r9, Z+9");
-  asm volatile("ldd r8, Z+8");
-  asm volatile("ldd r7, Z+7");
-  asm volatile("ldd r6, Z+6");
-  asm volatile("ldd r5, Z+5");
-  asm volatile("ldd r4, Z+4");
-  asm volatile("ldd r3, Z+3");
-  asm volatile("ldd r2, Z+2");
-  asm volatile("ldd r1, Z+1");
-  asm volatile("ldd r0, Z+34");      // SREG
-  asm volatile("out __SREG__, r0");  // may enable interrupts
-  asm volatile("ldd r0, Z+0");
-
-  asm volatile("pop r30");
-  asm volatile("pop r31");
-
-  asm volatile("ret");
-}
-
-void* __attribute__((naked)) restore_context(uint8_t* newctx) {
-  // switch argument pointer
-  asm volatile("movw r30, r24");
 
   // switch stacks
   asm volatile("ldd r0, Z+32");
@@ -213,11 +173,9 @@ void switch_task() {
   // if current task is killed free its memory
   if (_tasks[old_task]->id < 0) {
     free_task(old_task);
-    restore_context(_tasks[next_task]->ctx);
-    // never returns here
   }
 
-  switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
+  switch_context(_tasks[old_task] ? _tasks[old_task]->ctx : 0, _tasks[next_task]->ctx);
   // current task switches back here
 }
 
