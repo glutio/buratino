@@ -1,8 +1,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <Arduino.h>
-#include "Buratino.h"
-#include "TaskSwitcher.h"
+#include "BList.h"
+#include "BTaskSwitcher.h"
 
 enum Ctx {
   spl = 32,
@@ -11,12 +11,18 @@ enum Ctx {
   size
 };
 
+struct TaskInfoBase {
+  int8_t id;
+  BTask::ArgumentType* arg;
+  BTask delegate;
+};
+
 struct TaskInfo : TaskInfoBase {
   uint8_t ctx[Ctx::size];
   uint8_t stack[1];
 };
 
-List<TaskInfo*> _tasks;
+BList<TaskInfo*> _tasks;
 int8_t current_task = 0;
 
 uint8_t disable() {
@@ -29,7 +35,7 @@ void restore(uint8_t x) {
   SREG = x;
 }
 
-TaskInfo* alloc_task(int16_t stackSize) {
+TaskInfo* alloc_task(uint16_t stackSize) {
   auto taskInfo = (TaskInfo*)(new uint8_t[sizeof(TaskInfo) + (stackSize - 1)]);
   return taskInfo;
 }
@@ -40,7 +46,7 @@ void free_task(int8_t id) {
 }
 
 // original work (C) by Michael Minor
-// https :  //github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
+// https://github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
 void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
   // load oldctx to r31:r32
   asm volatile("push r31");
@@ -54,7 +60,7 @@ void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
   asm volatile("cli");
   asm volatile("EOR r1, r1");
   asm volatile("cp ZL, r1");
-  asm volatile("cpc ZH, r1");  
+  asm volatile("cpc ZH, r1");
   asm volatile("breq Restore");
   asm volatile("out __SREG__, r0");
   asm volatile("pop r1");
@@ -158,6 +164,7 @@ void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
 }
 
 void switch_task() {
+  // switch_task assumes interrupts are disabled
   auto next_task = current_task;
   do {
     next_task = (next_task + 1) % _tasks.Length();
@@ -193,13 +200,19 @@ void kill_task(int8_t id) {
   restore(sreg);
 }
 
+void yield_task() {
+  auto sreg = disable();
+  switch_task();
+  restore(sreg);
+}
+
 void task_wrapper(TaskInfo* taskInfo) {
-  taskInfo->delegate(&Buratino::_instance, taskInfo->arg);
+  taskInfo->delegate(0, taskInfo->arg);
   disable();
   kill_task(current_task);
 }
 
-int8_t run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
+int8_t run_task(BTask& task, BTask::ArgumentType* arg, uint16_t stackSize) {
   auto sreg = disable();
   auto new_task = 0;
   while (new_task < _tasks.Length() && _tasks[new_task]) {
@@ -232,7 +245,9 @@ int8_t run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   // push task_wrapper address for `ret` to pop
   *sp-- = lowByte((uintptr_t)task_wrapper);
   *sp-- = highByte((uintptr_t)task_wrapper);
+#if defined(__AVR_ATmega2560__)
   *sp-- = 0;  // for devices with more than 128kb program memory
+#endif
 
   // save the stack in the context
   taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);
@@ -241,6 +256,7 @@ int8_t run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
 
   restore(sreg);
+
   return new_task;
 }
 
@@ -271,28 +287,25 @@ ISR(TIMER1_COMPA_vect) {
   switch_task();
 }
 
-TaskSwitcher::TaskSwitcher() {
+BTaskSwitcher::BTaskSwitcher() {
 }
 
-void TaskSwitcher::YieldTask() {
-  auto sreg = disable();
-  switch_task();
-  restore(sreg);
-}
-
-void TaskSwitcher::Setup(int8_t tasks) {
+void BTaskSwitcher::Setup(int8_t tasks) {
   initialize(tasks);
 }
 
-void TaskSwitcher::Start() {
+void BTaskSwitcher::Start() {
   setup_timer();
 }
 
-
-int8_t TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize) {
+int8_t BTaskSwitcher::RunTask(BTask delegate, BTask::ArgumentType* arg, uint16_t stackSize) {
   run_task(delegate, arg, stackSize);
 }
 
-void TaskSwitcher::KillTask(int8_t id) {
+void BTaskSwitcher::KillTask(int8_t id) {
   kill_task(id);
+}
+
+void BTaskSwitcher::YieldTask() {
+  yield_task();
 }

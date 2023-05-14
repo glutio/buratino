@@ -3,12 +3,12 @@
 #include "Buratino.h"
 
 namespace HAL {
-DigitalPin button(9, INPUT_PULLUP, PinTrigger::Change);
-DigitalPin motion(7, INPUT_PULLUP, PinTrigger::Change);
-AnalogPin pot(0);
+BDigitalPin button(9, INPUT_PULLUP, BPinTrigger::Change);
+BDigitalPin motion(7, INPUT_PULLUP, BPinTrigger::Change);
+BAnalogPin pot(0);
 LedControl lc(12, 10, 11, 1);
-Joystick joystick(1, 2, 2);
-AnalogPin mic(3, PinTrigger::Always);
+BJoystick joystick(1, 2, 2, 518, 522);
+BAnalogPin mic(3, BPinTrigger::Always);
 }
 
 class App {
@@ -38,16 +38,16 @@ public:
     : _scrollUp(true),
       _scroll(true) {
 
-    HAL::joystick.OnMove = Joystick::MoveEvent(this, &App::OnJoystickMove);
-    HAL::joystick.OnClick = Joystick::ClickEvent(this, &App::OnJoystickClick);
+    HAL::joystick.OnMove = BJoystick::MoveEvent(this, &App::OnJoystickMove);
+    HAL::joystick.OnClick = BJoystick::ClickEvent(this, &App::OnJoystickClick);
     // HAL::button.OnChange = DigitalPin::ChangeEvent(this, &App::OnButtonClick);
-    HAL::motion.OnChange = DigitalPin::ChangeEvent(this, &App::OnMotionChange);
+    HAL::motion.OnChange = BDigitalPin::ChangeEvent(this, &App::OnMotionChange);
     // HAL::pot.OnChange = AnalogPin::ChangeEvent(this, &App::OnBrightnessChange);
     // HAL::mic.OnChange = AnalogPin::ChangeEvent(this, &App::OnMicChange);
     HAL::lc.shutdown(0, false);
   }
 
-  void OnJoystickMove(Joystick* joystick, JoystickMoveArgs* args) {
+  void OnJoystickMove(BJoystick* joystick, BJoystickMoveArgs* args) {
     // if (_scroll) {
     //   return;
     // }
@@ -74,51 +74,49 @@ public:
     auto y = (int8_t)pixel / 8;
 
     while (1) {
-    noInterrupts();
+      noInterrupts();
       auto i = (_offset + y) % sizeof(heart);
       auto h = _shift < 0 ? heart[i] << -_shift : heart[i] >> _shift;
       auto state = h & (1 << x);
-      HAL::lc.setLed(0, 8-x-1, 8-y-1, state);      
-    // Serial.println("task2");
-    // Serial.flush();
-    interrupts();
-    Buratino::YieldTask();
-    //delay(100);
+      HAL::lc.setLed(0, 8 - x - 1, 8 - y - 1, state);
+      // Serial.println("task2");
+      // Serial.flush();
+      interrupts();
+      Buratino::YieldTask();
     }
   }
 
-  void OnMicChange(AnalogPin*, AnalogPinChangeArgs* args) {
+  void OnMicChange(BAnalogPin*, BAnalogPinChangeArgs* args) {
   }
 
-  void OnJoystickClick(Joystick* joystick, void*) {
+  void OnJoystickClick(BJoystick* joystick, void*) {    
     _scroll = !_scroll;
     Buratino::KillTask(1);
-    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 148);
+    Buratino::RunTask(BTask(this, &App::OnTimerTick), nullptr, 256);
   }
 
-  void OnTimerTick(Buratino*, void*)
-  {
+  void OnTimerTick(Buratino*, void*) {
     auto m = millis();
     auto n = millis();
-    while(1)
-    {
+    while (1) {
       m = millis();
       delay(1);
       n = millis() - m;
       noInterrupts();
-      Serial.print(n);
+      Serial.println(n);
       Serial.flush();
       interrupts();
+      Buratino::YieldTask();
     }
   }
 
-  void OnButtonClick(DigitalPin* pin, DigitalPinChangeArgs* args) {
+  void OnButtonClick(BDigitalPin* pin, BDigitalPinChangeArgs* args) {
     if (!args->value) {
       _scrollUp = !_scrollUp;
     }
   }
 
-  void OnMotionChange(DigitalPin* pin, DigitalPinChangeArgs* args) {
+  void OnMotionChange(BDigitalPin* pin, BDigitalPinChangeArgs* args) {
     noInterrupts();
     if (args->value) {
       _offset = 0;
@@ -133,7 +131,7 @@ public:
     interrupts();
   }
 
-  void OnBrightnessChange(AnalogPin* pin, AnalogPinChangeArgs* args) {
+  void OnBrightnessChange(BAnalogPin* pin, BAnalogPinChangeArgs* args) {
     HAL::lc.setIntensity(0, map(args->value, 0, 1023, 0, 15));
   }
 public:
@@ -151,13 +149,11 @@ void setup() {
   Serial.begin(115200);
   Buratino::Setup(64);
 
-
-
-  Buratino::AddDevice(&HAL::button);
-  Buratino::AddDevice(&HAL::motion);
-  Buratino::AddDevice(&HAL::pot);
-  Buratino::AddDevice(&HAL::joystick);
-  Buratino::AddDevice(&HAL::mic);
+  HAL::button.Setup();
+  HAL::motion.Setup();
+  HAL::pot.Setup();
+  HAL::joystick.Setup();
+  HAL::mic.Setup();
 
   auto task = BTask(&app, &App::Draw);
   for (auto i = 0; i < 64; ++i) {
@@ -168,18 +164,22 @@ void setup() {
   Serial.println("done");
   Serial.flush();
   pinMode(6, OUTPUT);
-  digitalWrite(6, LOW);
+  //  digitalWrite(6, LOW);
 }
 
 void loop() {
-  Buratino::Update();
+  HAL::button.Update();
+  HAL::motion.Update();
+  HAL::pot.Update();
+  HAL::joystick.Update();
+  HAL::mic.Update();
   // noInterrupts();
-  // //Buratino::YieldTask();
+  Buratino::YieldTask();
   // interrupts();
 
   // noInterrupts();
   // Serial.println("task1");
   // Serial.flush();
   // interrupts();
-  delay(100); 
+  //delay(100);
 }

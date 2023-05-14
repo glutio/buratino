@@ -1,25 +1,28 @@
-#ifndef __BIND_H__
-#define __BIND_H__
+#ifndef __BEVENT_H__
+#define __BEVENT_H__
 
+/*
+  BRefCountedPtr - a smart pointer implementation
+*/
 template<typename T>
-class RefCountedPtr {
+class BRefCountedPtr {
 private:
   T* ptr;
   int* refCount;
 
 public:
   // Constructor
-  explicit RefCountedPtr(T* p = nullptr)
+  explicit BRefCountedPtr(T* p = nullptr)
     : ptr(p), refCount(new int(1)) {}
 
   // Copy constructor
-  RefCountedPtr(const RefCountedPtr& other)
+  BRefCountedPtr(const BRefCountedPtr& other)
     : ptr(other.ptr), refCount(other.refCount) {
     (*refCount)++;
   }
 
   // Assignment operator
-  RefCountedPtr& operator=(const RefCountedPtr& other) {
+  BRefCountedPtr& operator=(const BRefCountedPtr& other) {
     if (this != &other) {
       // Decrease the reference count of the current object
       (*refCount)--;
@@ -39,7 +42,7 @@ public:
   }
 
   // Destructor
-  ~RefCountedPtr() {
+  ~BRefCountedPtr() {
     (*refCount)--;
     if (*refCount == 0) {
       delete ptr;
@@ -63,8 +66,12 @@ public:
   }
 };
 
+
+/*
+  BEvent - a function/method delegate that takes two arguments
+*/
 template<typename TSender, typename TArgument>
-class EventDelegate {
+class BEvent {
 private:
   struct Callable {
     virtual ~Callable() {}
@@ -85,34 +92,34 @@ private:
   };
 
   struct CallableFunctionImpl : public Callable {
-    void (*_method)(TSender*, TArgument*);
+    void (*_func)(TSender*, TArgument*);
 
-    CallableFunctionImpl(void (*method)(TSender*, TArgument*))
-      : _method(method) {}
+    CallableFunctionImpl(void (*func)(TSender*, TArgument*))
+      : _func(func) {}
 
     void Call(TSender* sender, TArgument* argument) {
-      (_method)(sender, argument);
+      (_func)(sender, argument);
     }
   };
 
 protected:
-  RefCountedPtr<Callable> _callable;  // smart pointer
+  BRefCountedPtr<Callable> _callable;  // smart pointer
 
 public:
-  typedef TSender Sender;
-  typedef TArgument Argument;
+  typedef TSender SenderType;
+  typedef TArgument ArgumentType;
 
   template<typename TClass>
-  EventDelegate(const TClass* instance, void (TClass::*method)(TSender* sender, TArgument* argument))
+  BEvent(const TClass* instance, void (TClass::*method)(TSender* sender, TArgument* argument))
     : _callable(new CallableMethodImpl<TClass>(instance, method)) {}
 
-  EventDelegate(void (*function)(TSender* sender, TArgument* argument))
+  BEvent(void (*function)(TSender* sender, TArgument* argument))
     : _callable(new CallableFunctionImpl(function)) {}
 
-  EventDelegate()
+  BEvent()
     : _callable(0) {}
 
-  ~EventDelegate() {
+  ~BEvent() {
   }
 
   void operator()(TSender* sender, TArgument* argument) {

@@ -3,42 +3,26 @@
 
 #include <Arduino.h>
 
-#include "List.h"
-#include "Bind.h"
-#include "TaskSwitcher.h"
-#include "Pins.h"
-#include "Device.h"
-#include "Joystick.h"
-
-#ifndef BURATINO_MIN_TASKS
-#define BURATINO_MIN_TASKS 10
-#endif
-
-#ifndef BURATINO_MIN_TASKS
-#define BURATINO_MIN_TASKS 10
-#endif
-
-struct TaskInfo;
+#include "BList.h"
+#include "BEvent.h"
+#include "BTaskSwitcher.h"
+#include "BPins.h"
+#include "BJoystick.h"
 
 class Buratino {
 protected:
   bool _initialized;
-  List<IBuratinoDevice*> _devices;
-  static TaskSwitcher _taskSwitcher;
+  static BTaskSwitcher _taskSwitcher;
   static Buratino _instance;
 protected:
   Buratino();
  
 public:
-  static int8_t RunTask(BTask task, BTask::Argument* arg, int16_t stackSize = 128);
-  static void AddDevice(IBuratinoDevice* device);
+  static int8_t RunTask(BTask task, BTask::ArgumentType* arg, uint16_t stackSize = 128);
   static void Setup(int8_t tasks);
-  static void Update();
   static void YieldTask();
-  static void KillTask(int8_t id);
-  
-  friend class Task;
-  friend void task_wrapper(TaskInfo*);
+  static void KillTask(int8_t id); 
+  static void Start();
 };
 
 #endif
