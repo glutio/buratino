@@ -237,7 +237,7 @@ void task_wrapper(TaskInfo* taskInfo) {
   kill_task(current_task);
 }
 
-void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
+int8_t run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   auto sreg = disable();
   auto new_task = 0;
 
@@ -288,11 +288,12 @@ void run_task(BTask& task, BTask::Argument* arg, int16_t stackSize) {
   taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
 
   restore(sreg);
+  return new_task;
 }
 
 void initialize(int8_t tasks) {
   _tasks.Resize(tasks + 1);  // 1 for main loop()
-  
+
   // add the initial loop() task
   _tasks.Add(new TaskInfo());
   _tasks[0]->id = 0;
@@ -332,7 +333,7 @@ void TaskSwitcher::Setup(int8_t tasks) {
   setup_timer();
 }
 
-void TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize) {
+int8_t TaskSwitcher::RunTask(BTask delegate, BTask::Argument* arg, uint16_t stackSize) {
   run_task(delegate, arg, stackSize);
 }
 

@@ -14,8 +14,8 @@ void Buratino::AddDevice(IBuratinoDevice* device) {
   }
 }
 
-void Buratino::RunTask(BTask task, BTask::Argument* arg, int16_t stackSize) {
-  _taskSwitcher.RunTask(task, arg, stackSize);
+int8_t Buratino::RunTask(BTask task, BTask::Argument* arg, int16_t stackSize) {
+  return _taskSwitcher.RunTask(task, arg, stackSize);
 }
 
 void Buratino::Setup(int8_t tasks) {

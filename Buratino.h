@@ -30,7 +30,7 @@ protected:
   Buratino();
  
 public:
-  static void RunTask(BTask task, BTask::Argument* arg, int16_t stackSize = 128);
+  static int8_t RunTask(BTask task, BTask::Argument* arg, int16_t stackSize = 128);
   static void AddDevice(IBuratinoDevice* device);
   static void Setup(int8_t tasks);
   static void Update();

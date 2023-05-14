@@ -106,10 +106,10 @@ public:
       m = millis();
       delay(1);
       n = millis() - m;
-      noInterrupts();
-      Serial.println(n);
-      Serial.flush();
-      interrupts();
+      // noInterrupts();
+      // Serial.println(n);
+      // Serial.flush();
+      // interrupts();
     }
   }
 
