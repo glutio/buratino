@@ -276,7 +276,7 @@ void initialize(int8_t tasks) {
 }
 
 void setup_timer() {
-  noInterrupts();
+  auto sreg = disable();
 
   TCCR1A = 0;  // set timer for normal operation
   TCCR1B = 0;  // clear register
@@ -287,7 +287,7 @@ void setup_timer() {
   TCCR1B |= (1 << CS10);    // set prescaler to 1
   TIMSK1 |= (1 << OCIE1A);  // enable compare match interrupt
 
-  interrupts();
+  restore(sreg);
 }
 
 ISR(TIMER1_COMPA_vect) {

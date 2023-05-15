@@ -82,6 +82,7 @@ public:
       // Serial.println("task2");
       // Serial.flush();
       interrupts();
+      delay(1);
       Buratino::YieldTask();
     }
   }
@@ -155,7 +156,7 @@ App app;
 void setup() {
   Serial.begin(115200);
   Buratino::Setup(64);
-
+  noInterrupts();
   HAL::button.Setup();
   HAL::motion.Setup();
   HAL::pot.Setup();
@@ -172,6 +173,7 @@ void setup() {
   Serial.flush();
   pinMode(6, OUTPUT);
   //  digitalWrite(6, LOW);
+  interrupts();
 }
 
 void loop() {
