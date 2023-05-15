@@ -1,0 +1,23 @@
+#######################################
+# Syntax Coloring Map For Buratino
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+Buratino	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+Setup		KEYWORD2
+RunTask		KEYWORD2
+KillTask	KEYWORD2
+YieldTask	KEYWORD2
+CurrentTask	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+

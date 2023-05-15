@@ -55,23 +55,24 @@ int8_t current_task_id() {
 // original work (C) by Michael Minor
 // https://github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
 void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
+  // jump to restore if oldctx is null (current task killed)
+  // although the stack memory for the current task is deleted
+  // it has not been reallocated because interrupts are disabled
+  asm volatile("push r0");
+  asm volatile("push r1");
+  asm volatile("eor r0, r0");
+  asm volatile("in r1, __SREG__");
+  asm volatile("cpi r24, 0");
+  asm volatile("cpc r25, r0");
+  asm volatile("breq Restore");
+  asm volatile("out __SREG__, r1");
+  asm volatile("pop r1");
+  asm volatile("pop r0");
+
   // load oldctx to r31:r32
   asm volatile("push r31");
   asm volatile("push r30");
   asm volatile("movw r30, r24");
-
-  // jump to Restore if oldctx is null
-  asm volatile("push r0");
-  asm volatile("push r1");
-  asm volatile("in r0, __SREG__");
-  asm volatile("cli");
-  asm volatile("EOR r1, r1");
-  asm volatile("cp ZL, r1");
-  asm volatile("cpc ZH, r1");
-  asm volatile("breq Restore");
-  asm volatile("out __SREG__, r0");
-  asm volatile("pop r1");
-  asm volatile("pop r0");
 
   // save registers to oldctx
   asm volatile("std Z+0, r0");
@@ -213,6 +214,10 @@ void yield_task() {
   restore(sreg);
 }
 
+void yield() {
+  yield_task();
+}
+
 void task_wrapper(TaskInfo* taskInfo) {
   taskInfo->delegate(0, taskInfo->arg);
   disable();
@@ -262,7 +267,6 @@ int8_t run_task(BTask& task, BTask::ArgumentType* arg, uint16_t stackSize) {
 
   taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
 
-  Serial.print(new_task);
   restore(sreg);
   return new_task;
 }
@@ -313,7 +317,7 @@ void BTaskSwitcher::KillTask(int8_t id) {
   kill_task(id);
 }
 
-void BTaskSwitcher::YieldTask() {
+void BTaskSwitcher::YieldTask() {  
   yield_task();
 }
 
