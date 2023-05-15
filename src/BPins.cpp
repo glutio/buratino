@@ -36,7 +36,9 @@ BAnalogPin::operator uint16_t() {
   BDigitalPin - represents a digital pin on an Arduino board
 */
 BDigitalPin::BDigitalPin(uint8_t pin, BPinMode pinMode, BPinTrigger trigger)
-  : _pin(pin), _pinMode(pinMode), _trigger(trigger) {}
+  : _pin(pin), _pinMode(pinMode), _trigger(trigger) {
+    Setup();
+  }
 
 uint8_t BDigitalPin::Value() {
   return _value;
@@ -44,13 +46,16 @@ uint8_t BDigitalPin::Value() {
 
 void BDigitalPin::Setup() {
   pinMode(_pin, _pinMode);
-  _value = digitalRead(_pin);
+  if (_pinMode != BPinMode::Output)
+  {
+    _value = digitalRead(_pin);
+  }
 }
 
 void BDigitalPin::Update() {
   auto value = _value;
   _value = digitalRead(_pin);
-  if ((_trigger == BPinTrigger::Change && value != _value) || (_trigger == BPinTrigger::Low && _value == 0) || (_trigger == BPinTrigger::High && _value == 1) || (_trigger == BPinTrigger::Always)) {
+  if ((_trigger == BPinTrigger::Change && value != _value) || (_trigger == BPinTrigger::Low && _value == LOW) || (_trigger == BPinTrigger::High && _value == HIGH) || (_trigger == BPinTrigger::Always)) {
     BDigitalPinChangeArgs args;
     args.value = _value;
     args.oldValue = value;
@@ -59,7 +64,7 @@ void BDigitalPin::Update() {
 }
 
 BDigitalPin::operator()(uint8_t value) {
-  if (pinMode == OUTPUT) {
+  if (_pinMode == OUTPUT) {
     digitalWrite(_pin, value);
     _value = value;
   }

@@ -18,7 +18,8 @@ enum BPinTrigger {
   Change,
   Low,
   High,
-  Always
+  Always,
+  Never
 };
 
 enum BPinMode {
