@@ -245,9 +245,9 @@ int8_t run_task(BTask& task, BTask::ArgumentType* arg, uint16_t stackSize) {
   // push task_wrapper address for `ret` to pop
   *sp-- = lowByte((uintptr_t)task_wrapper);
   *sp-- = highByte((uintptr_t)task_wrapper);
-  //#if defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega2560__)
   *sp-- = 0;  // for devices with more than 128kb program memory
-              //#endif
+#endif
 
   // save the stack in the context
   taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);
