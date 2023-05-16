@@ -134,13 +134,10 @@ int8_t current_task_id() {
   asm volatile("ldd r10, Z+10"); \
   asm volatile("ldd r9, Z+9"); \
   asm volatile("ldd r8, Z+8"); \
-  \ 
   asm volatile("ldd r7, Z+7"); \
   asm volatile("ldd r6, Z+6"); \
   asm volatile("ldd r5, Z+5"); \
-  \ 
   asm volatile("ldd r4, Z+4"); \
-  \ 
   asm volatile("ldd r3, Z+3"); \
   asm volatile("ldd r2, Z+2"); \
   asm volatile("ldd r1, Z+1"); \
@@ -152,8 +149,8 @@ int8_t current_task_id() {
   asm volatile("ret");
 
 void __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
-  SaveContext(r24);
-  LoadContext(r22);
+  SaveContext(r24); // use register r24 for first argument (compiler specific)
+  LoadContext(r22); // use r22 for second argument (newctx)
 }
 
 void __attribute__((naked)) restore_context(uint8_t* ctx) {
@@ -205,12 +202,13 @@ void yield_task() {
   restore(sreg);
 }
 
+// used by arduino's delay()
 void yield() {
   yield_task();
 }
 
 void task_wrapper(TaskInfo* taskInfo) {
-  while (1) taskInfo->delegate(0, taskInfo->arg);
+  taskInfo->delegate(0, taskInfo->arg);
   kill_task(current_task_id());
 }
 
@@ -266,6 +264,7 @@ void initialize(int8_t tasks) {
 
   // add the initial loop() task
   _tasks.Add(alloc_task(1));  // loop() already has a stack
+  _tasks[0]->id = 0;
 }
 
 void setup_timer() {

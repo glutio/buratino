@@ -74,3 +74,7 @@ BDigitalPin::operator()(uint8_t value) {
 BDigitalPin::operator uint8_t() {
   return Value();
 }
+
+BDigitalPin::operator bool() {
+  return Value() != 0;
+}

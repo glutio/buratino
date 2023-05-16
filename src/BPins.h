@@ -68,6 +68,7 @@ public:
 
   operator()(uint8_t value);
   operator uint8_t();
+  explicit operator bool();
 };
 
 #endif
