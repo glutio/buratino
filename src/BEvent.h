@@ -13,7 +13,8 @@ private:
 public:
   // Constructor
   explicit BRefCountedPtr(T* p = nullptr)
-    : ptr(p), refCount(new int(1)) {}
+    : ptr(p), refCount(new int(1)) {
+  }
 
   // Copy constructor
   BRefCountedPtr(const BRefCountedPtr& other)
@@ -86,7 +87,7 @@ private:
     CallableMethodImpl(TClass* instance, void (TClass::*method)(TSender*, TArgument*))
       : _instance(instance), _method(method) {}
 
-    void Call(TSender* sender, TArgument* argument) {
+    virtual void Call(TSender* sender, TArgument* argument) {
       (_instance->*_method)(sender, argument);
     }
   };
@@ -97,7 +98,7 @@ private:
     CallableFunctionImpl(void (*func)(TSender*, TArgument*))
       : _func(func) {}
 
-    void Call(TSender* sender, TArgument* argument) {
+    virtual void Call(TSender* sender, TArgument* argument) {
       (_func)(sender, argument);
     }
   };
@@ -113,8 +114,8 @@ public:
   BEvent(const TClass* instance, void (TClass::*method)(TSender* sender, TArgument* argument))
     : _callable(new CallableMethodImpl<TClass>(instance, method)) {}
 
-  BEvent(void (*function)(TSender* sender, TArgument* argument))
-    : _callable(new CallableFunctionImpl(function)) {}
+  BEvent(void (*func)(TSender* sender, TArgument* argument))
+    : _callable(new CallableFunctionImpl(func)) {}
 
   BEvent()
     : _callable(0) {}

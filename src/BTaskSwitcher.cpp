@@ -36,8 +36,11 @@ void restore(uint8_t x) {
 }
 
 TaskInfo* alloc_task(uint16_t stackSize) {
-  auto taskInfo = (TaskInfo*)(new uint8_t[sizeof(TaskInfo) + (stackSize - 1)]);
-  return taskInfo;
+  auto block = (new uint8_t[sizeof(TaskInfo) + (stackSize - 1)]);
+  for(auto i = 0; i < sizeof(TaskInfo); ++i) {
+    block[i] = 0;
+  }
+  return (TaskInfo*)block;
 }
 
 void free_task(int8_t id) {
@@ -55,24 +58,23 @@ int8_t current_task_id() {
 // original work (C) by Michael Minor
 // https://github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
 void* __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
-  // jump to restore if oldctx is null (current task killed)
-  // although the stack memory for the current task is deleted
-  // it has not been reallocated because interrupts are disabled
-  asm volatile("push r0");
-  asm volatile("push r1");
-  asm volatile("eor r0, r0");
-  asm volatile("in r1, __SREG__");
-  asm volatile("cpi r24, 0");
-  asm volatile("cpc r25, r0");
-  asm volatile("breq Restore");
-  asm volatile("out __SREG__, r1");
-  asm volatile("pop r1");
-  asm volatile("pop r0");
-
   // load oldctx to r31:r32
   asm volatile("push r31");
   asm volatile("push r30");
   asm volatile("movw r30, r24");
+
+  // // jump to Restore if oldctx is null
+  // asm volatile("push r0");
+  // asm volatile("push r1");
+  // asm volatile("in r0, __SREG__");
+  // asm volatile("cli");
+  // asm volatile("EOR r1, r1");
+  // asm volatile("cp ZL, r1");
+  // asm volatile("cpc ZH, r1");
+  // asm volatile("breq Restore");
+  // asm volatile("out __SREG__, r0");
+  // asm volatile("pop r1");
+  // asm volatile("pop r0");
 
   // save registers to oldctx
   asm volatile("std Z+0, r0");
@@ -214,13 +216,8 @@ void yield_task() {
   restore(sreg);
 }
 
-void yield() {
-  yield_task();
-}
-
 void task_wrapper(TaskInfo* taskInfo) {
-  taskInfo->delegate(0, taskInfo->arg);
-  disable();
+  while (1) taskInfo->delegate(0, taskInfo->arg);
   kill_task(current_task);
 }
 
@@ -257,9 +254,9 @@ int8_t run_task(BTask& task, BTask::ArgumentType* arg, uint16_t stackSize) {
   // push task_wrapper address for `ret` to pop
   *sp-- = lowByte((uintptr_t)task_wrapper);
   *sp-- = highByte((uintptr_t)task_wrapper);
-#if defined(__AVR_ATmega2560__)
+  //#if defined(__AVR_ATmega2560__)
   *sp-- = 0;  // for devices with more than 128kb program memory
-#endif
+              //#endif
 
   // save the stack in the context
   taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);
@@ -309,7 +306,7 @@ void BTaskSwitcher::Start() {
   setup_timer();
 }
 
-int8_t BTaskSwitcher::RunTask(BTask delegate, BTask::ArgumentType* arg, uint16_t stackSize) {
+int8_t BTaskSwitcher::RunTask(BTask& delegate, BTask::ArgumentType* arg, uint16_t stackSize) {
   run_task(delegate, arg, stackSize);
 }
 
@@ -317,7 +314,7 @@ void BTaskSwitcher::KillTask(int8_t id) {
   kill_task(id);
 }
 
-void BTaskSwitcher::YieldTask() {  
+void BTaskSwitcher::YieldTask() {
   yield_task();
 }
 

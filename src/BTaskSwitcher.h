@@ -11,7 +11,7 @@ protected:
   BTaskSwitcher();
   void Setup(int8_t tasks);
   void Start();
-  int8_t RunTask(BTask delegate, BTask::ArgumentType* arg, uint16_t stackSize);
+  int8_t RunTask(BTask& delegate, BTask::ArgumentType* arg, uint16_t stackSize);
   void YieldTask();
   void KillTask(int8_t id);
   int8_t CurrentTask();

@@ -4,13 +4,15 @@
   BAnalogPin - represents an analog pin on an Arduino board
 */
 BAnalogPin::BAnalogPin(uint8_t pin, BPinTrigger trigger, uint8_t threshold)
-  : _pin(pin), _trigger(trigger), _threshold(threshold) {}
+  : _pin(pin), _trigger(trigger), _threshold(threshold) {
+  Reset();
+}
 
 uint16_t BAnalogPin::Value() {
   return _value;
 }
 
-void BAnalogPin::Setup() {
+void BAnalogPin::Reset() {
   _value = analogRead(_pin);
 }
 
@@ -37,17 +39,16 @@ BAnalogPin::operator uint16_t() {
 */
 BDigitalPin::BDigitalPin(uint8_t pin, BPinMode pinMode, BPinTrigger trigger)
   : _pin(pin), _pinMode(pinMode), _trigger(trigger) {
-    Setup();
-  }
+  Reset();
+}
 
 uint8_t BDigitalPin::Value() {
   return _value;
 }
 
-void BDigitalPin::Setup() {
+void BDigitalPin::Reset() {
   pinMode(_pin, _pinMode);
-  if (_pinMode != BPinMode::Output)
-  {
+  if (_pinMode != BPinMode::Output) {
     _value = digitalRead(_pin);
   }
 }
@@ -64,7 +65,7 @@ void BDigitalPin::Update() {
 }
 
 BDigitalPin::operator()(uint8_t value) {
-  if (_pinMode == OUTPUT) {
+  if (_pinMode == BPinMode::Output) {
     digitalWrite(_pin, value);
     _value = value;
   }

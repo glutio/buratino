@@ -42,7 +42,7 @@ public:
 public:
   BAnalogPin(uint8_t pin, BPinTrigger trigger = BPinTrigger::Change, uint8_t threshold = 15);
   uint16_t Value();
-  void Setup();
+  void Reset();
   void Update();
 
   operator uint16_t();
@@ -63,7 +63,7 @@ public:
   BDigitalPin(uint8_t pin, BPinMode pinMode = BPinMode::InputPullup, BPinTrigger trigger = BPinTrigger::Change);
                
   uint8_t Value();
-  void Setup();
+  void Reset();
   void Update();
 
   operator()(uint8_t value);

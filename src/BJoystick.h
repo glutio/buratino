@@ -25,8 +25,8 @@ protected:
   uint8_t _yPin;
   uint8_t _swPin;
 
-  uint16_t _centerX;
-  uint16_t _centerY;
+  int16_t _centerX;
+  int16_t _centerY;
 
   uint16_t _x;
   uint16_t _y;
@@ -37,8 +37,8 @@ public:
   ClickEvent OnClick;
 
 public:
-  BJoystick(uint8_t x, uint8_t y, uint8_t sw, uint16_t centerX = -1, uint16_t centerY = -1);
-  void Setup();
+  BJoystick(uint8_t x, uint8_t y, uint8_t sw, int16_t centerX = -1, int16_t centerY = -1);
+  void Calibrate();
   void Update();
 };
 
