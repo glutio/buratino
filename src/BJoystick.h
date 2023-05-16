@@ -37,8 +37,8 @@ public:
   ClickEvent OnClick;
 
 public:
-  BJoystick(uint8_t x, uint8_t y, uint8_t sw, int16_t centerX = -1, int16_t centerY = -1);
-  void Calibrate();
+  BJoystick(uint8_t x, uint8_t y, uint8_t sw);
+  void Reset();
   void Update();
 };
 

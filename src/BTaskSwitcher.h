@@ -3,6 +3,11 @@
 
 #include "BEvent.h"
 
+namespace B {
+  uint8_t disable();
+  void restore(uint8_t sreg);
+}
+
 class Buratino;
 typedef BEvent<Buratino, void> BTask;
 

@@ -46,9 +46,14 @@ uint8_t BDigitalPin::Value() {
   return _value;
 }
 
-void BDigitalPin::Reset() {
+void BDigitalPin::Reset(uint8_t value) {
   pinMode(_pin, _pinMode);
-  if (_pinMode != BPinMode::Output) {
+  if (_pinMode == BPinMode::Output) {
+    _value = value;
+    digitalWrite(_pin, value);
+  }
+  else
+  {
     _value = digitalRead(_pin);
   }
 }

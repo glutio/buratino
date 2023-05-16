@@ -63,7 +63,7 @@ public:
   BDigitalPin(uint8_t pin, BPinMode pinMode = BPinMode::InputPullup, BPinTrigger trigger = BPinTrigger::Change);
                
   uint8_t Value();
-  void Reset();
+  void Reset(uint8_t value = 0);
   void Update();
 
   operator()(uint8_t value);

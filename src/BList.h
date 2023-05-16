@@ -18,12 +18,12 @@ public:
   ~BList() {
     delete[] _array;
   }
-  
+
   T& operator[](uint16_t index) {
     return _array[index];
   }
 
-  Add(T item) {
+  void Add(T item) {
     if (_count == _capacity) {
       if (!_capacity) {
         _capacity = 1;
@@ -34,6 +34,13 @@ public:
     _array[_count++] = item;
   }
 
+  void Remove(uint16_t index) {
+    for (auto i = index; i < _count - 1; ++i) {
+      _array[i] = _array[i + 1];
+    }
+    --_count;
+  }
+  
   uint16_t Length() {
     return _count;
   }
@@ -43,13 +50,13 @@ public:
   }
 
   void Resize(uint16_t capacity) {
-      T* array = new T[capacity];
-      for (auto i = 0; i < _capacity; ++i) {
-        array[i] = _array[i];
-      }
-      delete[] _array;
-      _array = array;
-      _capacity = capacity;
+    T* array = new T[capacity];
+    for (auto i = 0; i < _capacity; ++i) {
+      array[i] = _array[i];
+    }
+    delete[] _array;
+    _array = array;
+    _capacity = capacity;
   }
 };
 

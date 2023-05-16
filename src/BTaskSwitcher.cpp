@@ -5,6 +5,8 @@
 #include "BList.h"
 #include "BTaskSwitcher.h"
 
+namespace B {
+
 enum Ctx {
   spl = 32,
   sph,
@@ -32,8 +34,8 @@ uint8_t disable() {
   return x;
 }
 
-void restore(uint8_t x) {
-  SREG = x;
+void restore(uint8_t sreg) {
+  SREG = sreg;
 }
 
 TaskInfo* alloc_task(uint16_t stackSize) {
@@ -245,9 +247,9 @@ int8_t run_task(BTask& task, BTask::ArgumentType* arg, uint16_t stackSize) {
   // push task_wrapper address for `ret` to pop
   *sp-- = lowByte((uintptr_t)task_wrapper);
   *sp-- = highByte((uintptr_t)task_wrapper);
-#if defined(__AVR_ATmega2560__)
+  //#if defined(__AVR_ATmega2560__)
   *sp-- = 0;  // for devices with more than 128kb program memory
-#endif
+              //#endif
 
   // save the stack in the context
   taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);
@@ -282,33 +284,35 @@ void setup_timer() {
   restore(sreg);
 }
 
+}
+
 ISR(TIMER1_COMPA_vect) {
-  switch_task();
+  B::switch_task();
 }
 
 BTaskSwitcher::BTaskSwitcher() {
 }
 
 void BTaskSwitcher::Setup(int8_t tasks) {
-  initialize(tasks);
+  B::initialize(tasks);
 }
 
 void BTaskSwitcher::Start() {
-  setup_timer();
+  B::setup_timer();
 }
 
 int8_t BTaskSwitcher::RunTask(BTask& delegate, BTask::ArgumentType* arg, uint16_t stackSize) {
-  run_task(delegate, arg, stackSize);
+  B::run_task(delegate, arg, stackSize);
 }
 
 void BTaskSwitcher::KillTask(int8_t id) {
-  kill_task(id);
+  B::kill_task(id);
 }
 
 void BTaskSwitcher::YieldTask() {
-  yield_task();
+  B::yield_task();
 }
 
 int8_t BTaskSwitcher::CurrentTask() {
-  return current_task_id();
+  return B::current_task_id();
 }

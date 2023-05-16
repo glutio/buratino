@@ -5,11 +5,11 @@
 
 #include "BJoystick.h"
 
-BJoystick::BJoystick(uint8_t x, uint8_t y, uint8_t sw, int16_t centerX, int16_t centerY)
-  : _xPin(x), _yPin(y), _swPin(sw), _centerX(centerX), _centerY(centerY) {
+BJoystick::BJoystick(uint8_t x, uint8_t y, uint8_t sw)
+  : _xPin(x), _yPin(y), _swPin(sw) {
 }
 
-void BJoystick::Calibrate() {
+void BJoystick::Reset() {
   pinMode(_swPin, INPUT_PULLUP);
   _sw = digitalRead(_swPin);
   _x = analogRead(_xPin);
