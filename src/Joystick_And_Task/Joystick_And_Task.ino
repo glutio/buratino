@@ -16,6 +16,10 @@ void TimerTask(Buratino* a, void* b) {
     Serial.println(localValue);
     delay(localValue);
     led(LOW);
+    Buratino::YieldTask();
+    noInterrupts();
+    localValue = timeout;
+    SREG = sreg;
     delay(localValue);
   }
 }
@@ -23,7 +27,7 @@ void TimerTask(Buratino* a, void* b) {
 void OnJoystickMove(BJoystick* joystick, BJoystickMoveArgs* args) {
   auto sreg = SREG;
   noInterrupts();
-  timeout = map(args->Y * args->X, 0, 1023*1023, 100, 2000);
+  timeout = map((long)args->Y * args->X, 0, 1023*1023, 100, 2000);
   SREG = sreg;
 }
 
