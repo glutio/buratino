@@ -8,9 +8,39 @@
 namespace B {
 
 enum Ctx {
-  spl = 32,
-  sph,
+  r0,
   sreg,
+  r1,
+  r2,
+  r3,
+  r4,
+  r5,
+  r6,
+  r7,
+  r8,
+  r9,
+  r10,
+  r11,
+  r12,
+  r13,
+  r14,
+  r15,
+  r16,
+  r17,
+  r18,
+  r19,
+  r20,
+  r21,
+  r22,
+  r23,
+  r24,
+  r25,
+  r26,
+  r27,
+  r28,
+  r29,
+  r30,
+  r31,
   size
 };
 
@@ -21,7 +51,7 @@ struct TaskInfoBase {
 };
 
 struct TaskInfo : TaskInfoBase {
-  uint8_t ctx[Ctx::size];
+  uint8_t* sp;
   uint8_t stack[1];
 };
 
@@ -57,106 +87,93 @@ int8_t current_task_id() {
   return id;
 }
 
-// original context switch work (C) by Michael Minor
-// https://github.com/9MMMinor/avrXinu-V7/blob/master/avr-Xinu/src/sys/sys/ctxsw.S
-#define SaveContext(r) \
-  asm volatile("push r31"); \
-  asm volatile("push r30"); \
-  asm volatile("movw r30, " #r); \
-  asm volatile("std Z+0, r0"); \
+#define SAVE_CONTEXT(rlow, rhigh) \
+  asm volatile("push r0"); \
   asm volatile("in r0, __SREG__"); \
-  asm volatile("std Z+34, r0"); \
-  asm volatile("std Z+1, r1"); \
-  asm volatile("std Z+2, r2"); \
-  asm volatile("std Z+3, r3"); \
-  asm volatile("std Z+4, r4"); \
-  asm volatile("std Z+5, r5"); \
-  asm volatile("std Z+6, r6"); \
-  asm volatile("std Z+7, r7"); \
-  asm volatile("std Z+8, r8"); \
-  asm volatile("std Z+9, r9"); \
-  asm volatile("std Z+10, r10"); \
-  asm volatile("std Z+11, r11"); \
-  asm volatile("std Z+12, r12"); \
-  asm volatile("std Z+13, r13"); \
-  asm volatile("std Z+14, r14"); \
-  asm volatile("std Z+15, r15"); \
-  asm volatile("std Z+16, r16"); \
-  asm volatile("std Z+17, r17"); \
-  asm volatile("std Z+18, r18"); \
-  asm volatile("std Z+19, r19"); \
-  asm volatile("std Z+20, r20"); \
-  asm volatile("std Z+21, r21"); \
-  asm volatile("std Z+22, r22"); \
-  asm volatile("std Z+23, r23"); \
-  asm volatile("std Z+24, r24"); \
-  asm volatile("std Z+25, r25"); \
-  asm volatile("std Z+26, r26"); \
-  asm volatile("std Z+27, r27"); \
-  asm volatile("std Z+28, r28"); \
-  asm volatile("std Z+29, r29"); \
-  asm volatile("pop r0"); \
-  asm volatile("std Z+30, r0"); \
-  asm volatile("pop r0"); \
-  asm volatile("std Z+31, r0"); \
+  asm volatile("push r0"); \
+  asm volatile("push r1"); \ 
+  asm volatile("push r2"); \
+  asm volatile("push r3"); \
+  asm volatile("push r4"); \
+  asm volatile("push r5"); \
+  asm volatile("push r6"); \
+  asm volatile("push r7"); \
+  asm volatile("push r8"); \
+  asm volatile("push r9"); \
+  asm volatile("push r10"); \
+  asm volatile("push r11"); \
+  asm volatile("push r12"); \
+  asm volatile("push r13"); \
+  asm volatile("push r14"); \
+  asm volatile("push r15"); \
+  asm volatile("push r16"); \
+  asm volatile("push r17"); \
+  asm volatile("push r18"); \
+  asm volatile("push r19"); \
+  asm volatile("push r20"); \
+  asm volatile("push r21"); \
+  asm volatile("push r22"); \
+  asm volatile("push r23"); \
+  asm volatile("push r24"); \
+  asm volatile("push r25"); \
+  asm volatile("push r26"); \
+  asm volatile("push r27"); \
+  asm volatile("push r28"); \
+  asm volatile("push r29"); \
+  asm volatile("push r30"); \
+  asm volatile("push r31"); \
+  asm volatile("movw r30, "#rlow); \
   asm volatile("in r0, __SP_L__"); \
-  asm volatile("std Z+32, r0"); \
-  asm volatile("in r0, __SP_H__"); \
-  asm volatile("std Z+33, r0");
+  asm volatile("in r1, __SP_H__"); \
+  asm volatile("std Z+0, r0"); \
+  asm volatile("std Z+1, r1")
 
-#define LoadContext(r) \
-  asm volatile("movw r30, " #r); \
-  asm volatile("ldd r0, Z+32"); \
-  asm volatile("out __SP_L__, r0"); \
-  asm volatile("ldd r0, Z+33"); \
-  asm volatile("out __SP_H__, r0"); \
-  asm volatile("ldd r0, Z+31"); \
-  asm volatile("push r0"); \
-  asm volatile("ldd r0, Z+30"); \
-  asm volatile("push r0"); \
-  asm volatile("ldd r29, Z+29"); \
-  asm volatile("ldd r28, Z+28"); \
-  asm volatile("ldd r27, Z+27"); \
-  asm volatile("ldd r26, Z+26"); \
-  asm volatile("ldd r25, Z+25"); \
-  asm volatile("ldd r24, Z+24"); \
-  asm volatile("ldd r23, Z+23"); \
-  asm volatile("ldd r22, Z+22"); \
-  asm volatile("ldd r21, Z+21"); \
-  asm volatile("ldd r20, Z+20"); \
-  asm volatile("ldd r19, Z+19"); \
-  asm volatile("ldd r18, Z+18"); \
-  asm volatile("ldd r17, Z+17"); \
-  asm volatile("ldd r16, Z+16"); \
-  asm volatile("ldd r15, Z+15"); \
-  asm volatile("ldd r14, Z+14"); \
-  asm volatile("ldd r13, Z+13"); \
-  asm volatile("ldd r12, Z+12"); \
-  asm volatile("ldd r11, Z+11"); \
-  asm volatile("ldd r10, Z+10"); \
-  asm volatile("ldd r9, Z+9"); \
-  asm volatile("ldd r8, Z+8"); \
-  asm volatile("ldd r7, Z+7"); \
-  asm volatile("ldd r6, Z+6"); \
-  asm volatile("ldd r5, Z+5"); \
-  asm volatile("ldd r4, Z+4"); \
-  asm volatile("ldd r3, Z+3"); \
-  asm volatile("ldd r2, Z+2"); \
-  asm volatile("ldd r1, Z+1"); \
-  asm volatile("ldd r0, Z+34"); \
-  asm volatile("out __SREG__, r0"); \
-  asm volatile("ldd r0, Z+0"); \
-  asm volatile("pop r30"); \
+#define LOAD_CONTEXT(rlow, rhigh) \
+  asm volatile("out __SP_L__, " #rlow); \
+  asm volatile("out __SP_H__, " #rhigh); \
   asm volatile("pop r31"); \
+  asm volatile("pop r30"); \
+  asm volatile("pop r29"); \
+  asm volatile("pop r28"); \
+  asm volatile("pop r27"); \
+  asm volatile("pop r26"); \
+  asm volatile("pop r25"); \
+  asm volatile("pop r24"); \
+  asm volatile("pop r23"); \
+  asm volatile("pop r22"); \
+  asm volatile("pop r21"); \
+  asm volatile("pop r20"); \
+  asm volatile("pop r19"); \
+  asm volatile("pop r18"); \
+  asm volatile("pop r17"); \
+  asm volatile("pop r16"); \
+  asm volatile("pop r15"); \
+  asm volatile("pop r14"); \
+  asm volatile("pop r13"); \
+  asm volatile("pop r12"); \
+  asm volatile("pop r11"); \
+  asm volatile("pop r10"); \
+  asm volatile("pop r9"); \
+  asm volatile("pop r8"); \
+  asm volatile("pop r7"); \
+  asm volatile("pop r6"); \
+  asm volatile("pop r5"); \
+  asm volatile("pop r4"); \
+  asm volatile("pop r3"); \
+  asm volatile("pop r2"); \
+  asm volatile("pop r1"); \
+  asm volatile("pop r0"); \
+  asm volatile("out __SREG__, r0"); \
+  asm volatile("pop r0"); \
   asm volatile("ret");
 
-void __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
-  SaveContext(r24); // use register r24 for first argument (compiler specific)
-  LoadContext(r22); // use r22 for second argument (newctx)
+void __attribute__((naked)) switch_context(uint8_t** old_sp, uint8_t* new_sp) {
+  SAVE_CONTEXT(r24, r25);
+  LOAD_CONTEXT(r22, r23);  // use register r24,25 for first argument (compiler specific)
 }
 
-void __attribute__((naked)) restore_context(uint8_t* ctx) {
-  LoadContext(r24);
+void __attribute__((naked)) restore_context(uint8_t* sp) {
+  LOAD_CONTEXT(r24, r25);  // registers used to pass first parameter (compiler specific)
 }
 
 void switch_task() {
@@ -176,11 +193,11 @@ void switch_task() {
   // if current task is killed free its memory
   if (_tasks[old_task]->id < 0) {
     free_task(old_task);
-    restore_context(_tasks[next_task]->ctx);
+    restore_context(_tasks[next_task]->sp);
     // never returns
   }
 
-  switch_context(_tasks[old_task]->ctx, _tasks[next_task]->ctx);
+  switch_context(&_tasks[old_task]->sp, _tasks[next_task]->sp);
   // current task switches back here
 }
 
@@ -231,31 +248,27 @@ int8_t run_task(BTask& task, BTask::ArgumentType* arg, uint16_t stackSize) {
   taskInfo->id = new_task;
   taskInfo->delegate = task;
   taskInfo->arg = arg;
+  taskInfo->sp = &taskInfo->stack[stackSize - 1];
+  *taskInfo->sp-- = 0xAA;
+
+  // push task_wrapper address for `ret` to pop
+  *taskInfo->sp-- = lowByte((uintptr_t)task_wrapper);
+  *taskInfo->sp-- = highByte((uintptr_t)task_wrapper);
+#if defined(__AVR_ATmega2560__)
+  *taskInfo->sp-- = 0;  // for devices with more than 128kb program memory
+#endif
+
+  *taskInfo->sp-- = 0;     // r0
+  *taskInfo->sp-- = 0x80;  // SREG, enable interrupts
 
   // clear registers
-  for (auto i = 0; i < Ctx::size; ++i) {
-    taskInfo->ctx[i] = 0;
+  for (uint8_t i = Ctx::r1; i < Ctx::size; ++i) {
+    *taskInfo->sp-- = 0;
   }
 
   // compiler/architecture specific, passing argument via registers
-  taskInfo->ctx[24] = lowByte((uintptr_t)taskInfo);   // r24
-  taskInfo->ctx[25] = highByte((uintptr_t)taskInfo);  // r25
-
-  uint8_t* sp = &taskInfo->stack[stackSize - 1];
-  *sp-- = 0xAA;  // magic number indicating bottom of stack
-
-  // push task_wrapper address for `ret` to pop
-  *sp-- = lowByte((uintptr_t)task_wrapper);
-  *sp-- = highByte((uintptr_t)task_wrapper);
-  //#if defined(__AVR_ATmega2560__)
-  *sp-- = 0;  // for devices with more than 128kb program memory
-              //#endif
-
-  // save the stack in the context
-  taskInfo->ctx[Ctx::spl] = lowByte((uintptr_t)sp);
-  taskInfo->ctx[Ctx::sph] = highByte((uintptr_t)sp);
-
-  taskInfo->ctx[Ctx::sreg] = 0x80;  // SREG
+  *(taskInfo->sp + Ctx::size - Ctx::r24) = lowByte((uintptr_t)taskInfo);   // r24
+  *(taskInfo->sp + Ctx::size - Ctx::r25) = highByte((uintptr_t)taskInfo);  // r25
 
   restore(sreg);
   return new_task;

@@ -3,17 +3,16 @@
 BDigitalPin led(6, BPinMode::Output, BPinTrigger::Never);
 BAnalogPin pot(0 /* pin */);
 
+// synchronize access to this shared global variable
 BSync<uint16_t> timeout(1000);
 
-void TimerTask(Buratino* a, void* b) {  
+void TimerTask(Buratino* a, void* b) {
   auto start = millis();
   while (1) {
-    // disable task switching while reading shared global variable into local variable
-    if (timeout < (uint16_t)(millis() - start))
-    {
+    if (timeout < (uint16_t)(millis() - start)) {
       led(!led);
       start = millis();
-      Buratino::YieldTask(); // done with this iteration, let other tasks run
+      Buratino::YieldTask();  // done with this iteration, let other tasks run
     }
   }
 }
@@ -25,16 +24,14 @@ void OnPotChange(BAnalogPin* pin, BAnalogPinChangeArgs* args) {
 void setup() {
   pot.Reset();
   pot.OnChange = BAnalogPin::ChangeEvent(OnPotChange);
-  
-  Buratino::Stop();
-  Buratino::Setup(1 /* number of tasks */); // sets up time switcher interrupt
-  Buratino::Start();
+
+  noInterrupts();
+  Buratino::Setup(1 /* number of tasks */);  // also sets up task switcher interrupt
   Buratino::RunTask(BTask(TimerTask), 0, 1024);
-  interrupts(); // enable task switcher
+  interrupts();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  pot.Update(); // refresh values from inputs
-  delay(100);
+  pot.Update();  // refresh values from inputs
 }
