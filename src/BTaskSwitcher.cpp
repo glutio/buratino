@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <new>
 #include <Arduino.h>
 #include "BList.h"
 #include "BTaskSwitcher.h"
@@ -36,15 +37,13 @@ void restore(uint8_t x) {
 }
 
 TaskInfo* alloc_task(uint16_t stackSize) {
-  auto block = (new uint8_t[sizeof(TaskInfo) + (stackSize - 1)]);
-  // initialize memory for delegate instead of calling the constructor
-  for(auto i = 0; i < sizeof(TaskInfo); ++i) {
-    block[i] = 0;
-  }  
-  return (TaskInfo*)block;
+  auto block = new uint8_t[sizeof(TaskInfo) + (stackSize - 1)];
+  auto taskInfo = new (block) TaskInfo();
+  return taskInfo;
 }
 
 void free_task(int8_t id) {
+  _tasks[id]->~TaskInfo();
   delete[](uint8_t*) _tasks[id];
   _tasks[id] = 0;
 }
@@ -61,7 +60,7 @@ int8_t current_task_id() {
 #define SaveContext(r) \
   asm volatile("push r31"); \
   asm volatile("push r30"); \
-  asm volatile("movw r30, "#r); \
+  asm volatile("movw r30, " #r); \
   asm volatile("std Z+0, r0"); \
   asm volatile("in r0, __SREG__"); \
   asm volatile("std Z+34, r0"); \
@@ -104,7 +103,7 @@ int8_t current_task_id() {
   asm volatile("std Z+33, r0");
 
 #define LoadContext(r) \
-  asm volatile("movw r30, "#r); \
+  asm volatile("movw r30, " #r); \
   asm volatile("ldd r0, Z+32"); \
   asm volatile("out __SP_L__, r0"); \
   asm volatile("ldd r0, Z+33"); \
@@ -134,11 +133,14 @@ int8_t current_task_id() {
   asm volatile("ldd r11, Z+11"); \
   asm volatile("ldd r10, Z+10"); \
   asm volatile("ldd r9, Z+9"); \
-  asm volatile("ldd r8, Z+8"); \ 
+  asm volatile("ldd r8, Z+8"); \
+  \ 
   asm volatile("ldd r7, Z+7"); \
   asm volatile("ldd r6, Z+6"); \
-  asm volatile("ldd r5, Z+5"); \ 
-  asm volatile("ldd r4, Z+4"); \ 
+  asm volatile("ldd r5, Z+5"); \
+  \ 
+  asm volatile("ldd r4, Z+4"); \
+  \ 
   asm volatile("ldd r3, Z+3"); \
   asm volatile("ldd r2, Z+2"); \
   asm volatile("ldd r1, Z+1"); \
@@ -154,8 +156,7 @@ void __attribute__((naked)) switch_context(uint8_t* oldctx, uint8_t* newctx) {
   LoadContext(r22);
 }
 
-void __attribute__((naked)) restore_context(uint8_t* ctx)
-{
+void __attribute__((naked)) restore_context(uint8_t* ctx) {
   LoadContext(r24);
 }
 
