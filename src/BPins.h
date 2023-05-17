@@ -66,7 +66,7 @@ public:
   void Reset(uint8_t value = 0);
   void Update();
 
-  operator()(uint8_t value);
+  void operator()(uint8_t value);
   operator uint8_t();
   explicit operator bool();
 };

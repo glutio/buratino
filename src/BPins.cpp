@@ -69,7 +69,7 @@ void BDigitalPin::Update() {
   }
 }
 
-BDigitalPin::operator()(uint8_t value) {
+void BDigitalPin::operator()(uint8_t value) {
   if (_pinMode == BPinMode::Output) {
     digitalWrite(_pin, value);
     _value = value;

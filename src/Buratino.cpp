@@ -18,7 +18,6 @@ void Buratino::Setup(int8_t tasks) {
   if (!_instance._initialized) {
     _instance._initialized = true;
     _instance._taskSwitcher.Setup(tasks);
-    _instance._taskSwitcher.Start();
   }
 }
 

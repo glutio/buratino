@@ -3,6 +3,11 @@
 
 #include "BTaskSwitcher.h"
 
+namespace B {
+  bool disable();
+  void restore(bool);
+}
+
 template<typename T>
 class BSync {
 private:
