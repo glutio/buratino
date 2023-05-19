@@ -52,10 +52,10 @@ void __attribute__((naked)) switch_context(uint8_t** old_sp, uint8_t* new_sp) {
   asm volatile("mov r6,r11");
   asm volatile("mov r7,r12");
   asm volatile("push {r3-r7}");
-  asm volatile("mrs r3, psp");
+  asm volatile("mov r3, sp");
   asm volatile("str r3, [r0]");
 
-  asm volatile("msr psp, r1");
+  asm volatile("mov sp, r1");
   asm volatile("pop {r3-r7}");
   asm volatile("mov r8,r3");
   asm volatile("mov r9,r4");
@@ -71,23 +71,26 @@ void __attribute__((naked)) switch_context(uint8_t** old_sp, uint8_t* new_sp) {
 }
 
 int init_task(BTaskInfo* taskInfo) {
-  // align stack pointer
-  taskInfo->sp = (uint8_t*)((uintptr_t)taskInfo->sp & ~0x3);
+  // align stack pointer and skip a word
+  taskInfo->sp = (uint8_t*)((uintptr_t)taskInfo->sp & ~0x7);
 
   // clear registers
   for (unsigned i = 0; i < Ctx::size; ++i) {
+    *(uint32_t*)taskInfo->sp = 99-i;
     taskInfo->sp -= sizeof(uint32_t);
-    *(uint32_t*)taskInfo->sp = 0;
   }
-  //taskInfo->sp -= sizeof(uint32_t);
 
   // // compiler/architecture specific, passing argument via registers
   uint32_t* sp = (uint32_t*)taskInfo->sp;
-  --sp;
+  SerialUSB.printf("init: %u\n", taskInfo);
   sp[Ctx::size - Ctx::r0] = (uintptr_t)taskInfo;
   sp[Ctx::size - Ctx::psr] = 0x1F | 0x40;  // sys mode and disable fiq
   sp[Ctx::size - Ctx::primask] = 0x1;
   sp[Ctx::size - Ctx::lr] = (uintptr_t)task_wrapper;  // r24
+
+  // for (unsigned i = 0; i < Ctx::size; i++) {
+  //   SerialUSB.print(sp[Ctx::size], )
+  // }
 }
 
 void init_arch() {
@@ -95,12 +98,11 @@ void init_arch() {
 
 }
 
-bool done = false;
 extern "C" {
   int sysTickHook() {
     auto i = B::disable();
-    B::switch_task();
-    B::restore(i);    
+    // B::switch_task();
+    B::restore(i);
     return 0;
   }
 }

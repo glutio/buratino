@@ -20,10 +20,10 @@ BList<BTaskInfo*> _tasks;
 int current_task = 0;
 
 BTaskInfo* alloc_task(uintptr_t stackSize) {
-  auto size = sizeof(BTaskInfo) + (stackSize - 1) + context_size();
-  auto block = new uint8_t[size];
+  auto size = (stackSize - 1) + context_size();
+  auto block = new uint8_t[sizeof(BTaskInfo) + size];
   auto taskInfo = new (block) BTaskInfo();
-  taskInfo->sp = &taskInfo->stack[(stackSize - 1) + context_size() - 1];
+  taskInfo->sp = &taskInfo->stack[size - 1];
   return taskInfo;
 }
 
@@ -63,10 +63,15 @@ void switch_task() {
   if (taskInfo->id < 0) {
     free_task(old_task);
   }
-  //SerialUSB.printf("%u %u\n", next_task, (uintptr_t)_tasks[next_task]->sp);
+  SerialUSB.printf("O: %u %u\n", old_task, (uintptr_t)_tasks[old_task]->sp);
+  SerialUSB.printf("N: %u %u\n", next_task, (uintptr_t)_tasks[next_task]->sp);
+  // SerialUSB.printf(_tasks[next_task] == _tasks[old_task] ? "Y\n" : "N\n");
   //*(uint32_t*)_tasks[next_task]->sp = 0;
   //SerialUSB.println((uintptr_t)_tasks[next_task]->sp);
   switch_context(&taskInfo->sp, _tasks[next_task]->sp);
+  SerialUSB.printf("*O: %u %u\n", old_task, (uintptr_t)_tasks[old_task]->sp);
+  SerialUSB.printf("*N: %u %u\n", next_task, (uintptr_t)_tasks[next_task]->sp);
+
   // current task switches back here
 }
 
@@ -96,8 +101,10 @@ void yield() {
 }
 
 void task_wrapper(BTaskInfo* taskInfo) {
-  SerialUSB.println("wrapper");
+  SerialUSB.printf("wrapper: %u\n", taskInfo);
+  //SerialUSB.printf("wrapper %u\n", taskInfo->arg);
   taskInfo->delegate(0, taskInfo->arg);
+  SerialUSB.println("wrapper done");
   kill_task(current_task_id());
 }
 
