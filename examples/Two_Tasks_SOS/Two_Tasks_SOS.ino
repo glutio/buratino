@@ -50,15 +50,15 @@ void setup() {
   noInterrupts();
   led.Reset(1);
   Buratino::Setup(1 /* number of tasks */);  // also sets up task switcher interrupt
-  Buratino::RunTask(BTask(Dashes), 0, 1024);
-  Buratino::RunTask(BTask(Dots), 0, 1024);
+  Buratino::RunTask(BTask(Dashes), 0, 2024);
+  Buratino::RunTask(BTask(Dots), 0, 2024);
   interrupts();
 }
 
 void loop() {
   Buratino::YieldTask();
-  // noInterrupts();
+  noInterrupts();
   SerialUSB.println("loop"); //delay(1000);
-  // interrupts();
+  interrupts();
   //Buratino::YieldTask();
 }
