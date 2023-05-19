@@ -63,15 +63,8 @@ void switch_task() {
   if (taskInfo->id < 0) {
     free_task(old_task);
   }
-  SerialUSB.printf("O: %u %u\n", old_task, (uintptr_t)_tasks[old_task]->sp);
-  SerialUSB.printf("N: %u %u\n", next_task, (uintptr_t)_tasks[next_task]->sp);
-  // SerialUSB.printf(_tasks[next_task] == _tasks[old_task] ? "Y\n" : "N\n");
-  //*(uint32_t*)_tasks[next_task]->sp = 0;
-  //SerialUSB.println((uintptr_t)_tasks[next_task]->sp);
-  switch_context(&taskInfo->sp, _tasks[next_task]->sp);
-  SerialUSB.printf("*O: %u %u\n", old_task, (uintptr_t)_tasks[old_task]->sp);
-  SerialUSB.printf("*N: %u %u\n", next_task, (uintptr_t)_tasks[next_task]->sp);
 
+  switch_context(&taskInfo->sp, _tasks[next_task]->sp);
   // current task switches back here
 }
 
@@ -95,16 +88,8 @@ void yield_task() {
   restore(sreg);
 }
 
-// used by arduino's delay()
-void yield() {
-  yield_task();
-}
-
 void task_wrapper(BTaskInfo* taskInfo) {
-  SerialUSB.printf("wrapper: %u\n", taskInfo);
-  //SerialUSB.printf("wrapper %u\n", taskInfo->arg);
   taskInfo->delegate(0, taskInfo->arg);
-  SerialUSB.println("wrapper done");
   kill_task(current_task_id());
 }
 
@@ -142,6 +127,12 @@ void initialize(int tasks) {
 }
 
 }
+
+// used by arduino's delay()
+// void yield() {
+//  B::yield_task();
+// }
+
 
 BTaskSwitcher::BTaskSwitcher() {
 }

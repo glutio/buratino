@@ -10,22 +10,22 @@ void task_wrapper(BTaskInfo*);
 void restore(bool);
 
 enum Ctx {
-  r3,
   lr,
+  r3,
   primask,
   psr,
-  r0,
-  r1,
-  r2,
-  r4,
-  r5,
-  r6,
   r7,
-  r8,
-  r9,
-  r10,
-  r11,
+  r6,
+  r5,
+  r4,
+  r2,
+  r1,
+  r0,
   r12,
+  r11,
+  r10,
+  r9,
+  r8,
   size
 };
 
@@ -72,25 +72,21 @@ void __attribute__((naked)) switch_context(uint8_t** old_sp, uint8_t* new_sp) {
 
 int init_task(BTaskInfo* taskInfo) {
   // align stack pointer and skip a word
-  taskInfo->sp = (uint8_t*)((uintptr_t)taskInfo->sp & ~0x7);
+  taskInfo->sp = (uint8_t*)((uintptr_t)taskInfo->sp & ~0x3);
 
   // clear registers
   for (unsigned i = 0; i < Ctx::size; ++i) {
-    *(uint32_t*)taskInfo->sp = 99-i;
     taskInfo->sp -= sizeof(uint32_t);
+    *(uint32_t*)taskInfo->sp = 0;
   }
 
   // // compiler/architecture specific, passing argument via registers
   uint32_t* sp = (uint32_t*)taskInfo->sp;
-  SerialUSB.printf("init: %u\n", taskInfo);
+  sp--;
   sp[Ctx::size - Ctx::r0] = (uintptr_t)taskInfo;
   sp[Ctx::size - Ctx::psr] = 0x1F | 0x40;  // sys mode and disable fiq
-  sp[Ctx::size - Ctx::primask] = 0x1;
-  sp[Ctx::size - Ctx::lr] = (uintptr_t)task_wrapper;  // r24
-
-  // for (unsigned i = 0; i < Ctx::size; i++) {
-  //   SerialUSB.print(sp[Ctx::size], )
-  // }
+  sp[Ctx::size - Ctx::primask] = 0x0;
+  sp[Ctx::size - Ctx::lr] = (uintptr_t)task_wrapper;  // r24  
 }
 
 void init_arch() {
@@ -101,7 +97,8 @@ void init_arch() {
 extern "C" {
   int sysTickHook() {
     auto i = B::disable();
-    // B::switch_task();
+    Serial.println("switch");
+    //B::switch_task();
     B::restore(i);
     return 0;
   }

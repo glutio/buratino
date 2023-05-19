@@ -1,85 +1,64 @@
 #include "Buratino.h"
+
 BDigitalPin led(LED_BUILTIN, BPinMode::Output, BPinTrigger::Never);
 
-// // synchronize access to this shared global variable
-// BSync<bool> dash = true;
+// synchronize access to this shared global variable
+BSync<bool> dash = true;
 
-// void Dots(Buratino* a, void* b) {
-//   while(1) {
-//     if (!dash) {
-//       auto ct=3;
-//       while(ct-->0) {
-//         led(HIGH);
-//         delay(200);
-//         led(LOW);
-//         delay(200);
-//       }
-//       dash = true;
-//     }
-//   }
-// }
+void Dots(Buratino* a, void* b) {
 
-// void Dashes(Buratino* a, void* b) {
-//   while(1) {
-//     if (dash) {
-//       auto ct=3;
-//       while(ct-->0) {
-//         led(HIGH);
-//         delay(700);
-//         led(LOW);
-//         delay(700);
-//       }
-//       dash = false;
-//     }
-//   }
-// }
+  while(1) {
+    noInterrupts();
+    SerialUSB.println("dots");
+    interrupts();
+    Buratino::YieldTask();
 
-void Task1(Buratino*, void*)
-{
-  while(1)
-  {
-    led(0); delay(700); led(1);  delay(700);
-    led(0); delay(700); led(1);  delay(700);
-    led(0); delay(700); led(1);  delay(700);
-
-    led(0); delay(200); led(1);  delay(200);
-    led(0); delay(200); led(1);  delay(200);
-    led(0); delay(200); led(1);  delay(200);
-
-    delay(700);
+    // if (!dash) {
+    //   auto ct=3;
+    //   while(ct-->0) {
+    //     led(HIGH);
+    //     delay(200);
+    //     led(LOW);
+    //     delay(200);
+    //   }
+    //   dash = true;
+    // }
   }
-
 }
 
-namespace B{
-  int run_task(BTask& task, BTask::ArgumentType* arg, uintptr_t stackSize) ;
-  void kill_task(int);
-  void switch_task();
-};
+void Dashes(Buratino* a, void* b) {
+  while(1) {
+    noInterrupts();
+    SerialUSB.println("dashes");
+    interrupts();
+    Buratino::YieldTask();
+  //  if (dash) {
+  //     auto ct=3;
+  //     while(ct-->0) {
+  //       led(LOW);
+  //       //delay(700);
+  //       led(HIGH);
+  //       //(700);
+  //     }
+  //    dash = false;
+  //  }
+  }
+}
 
 void setup() {
-  //pinMode(LED_BUILTIN, OUTPUT);
   SerialUSB.begin(115200);
+  noInterrupts();
   led.Reset(1);
-  Buratino::Setup(1);
+  Buratino::Setup(1 /* number of tasks */);  // also sets up task switcher interrupt
+  Buratino::RunTask(BTask(Dashes), 0, 1024);
+  Buratino::RunTask(BTask(Dots), 0, 1024);
+  interrupts();
 }
 
-int i =0;
-  BTask task(Task1);
 void loop() {
-  delay(10000);
-  auto t = B::run_task(task,(void*)123, 256);  
-  SerialUSB.println(i++);
-  B::switch_task();
-  B::kill_task(t);
-
-  // digitalWrite(LED_BUILTIN, 0); delay(700); digitalWrite(LED_BUILTIN, 1);  delay(700);
-  // digitalWrite(LED_BUILTIN, 0); delay(700); digitalWrite(LED_BUILTIN, 1);  delay(700);
-  // digitalWrite(LED_BUILTIN, 0); delay(700); digitalWrite(LED_BUILTIN, 1);  delay(700);
-
-  // digitalWrite(LED_BUILTIN, 0); delay(200); digitalWrite(LED_BUILTIN, 1);  delay(200);
-  // digitalWrite(LED_BUILTIN, 0); delay(200); digitalWrite(LED_BUILTIN, 1);  delay(200);
-  // digitalWrite(LED_BUILTIN, 0); delay(200); digitalWrite(LED_BUILTIN, 1);  delay(200);
-
-  // delay(700);
+  Buratino::YieldTask();
+  // noInterrupts();
+  SerialUSB.println("loop"); //delay(1000);
+  // interrupts();
+  //Buratino::YieldTask();
 }
