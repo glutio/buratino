@@ -6,7 +6,7 @@
 
 namespace B {
 
-int next_task;
+int _next_task;
 
 struct Ctx {
   uint32_t r8;
@@ -57,7 +57,7 @@ void yield_task() {
 void kill_task(int id) {
   auto sreg = disable();
   if (id > 0 && id < _tasks.Length() && _tasks[id]) {
-    if (id != current_task) {
+    if (id != _current_task) {
       free_task(id);
     } else {
       _tasks[id]->id = -1;
@@ -68,7 +68,7 @@ void kill_task(int id) {
 }
 
 void init_arch() {
-  next_task = current_task;
+  _next_task = _current_task;
 }
 
 }
@@ -76,17 +76,16 @@ void init_arch() {
 extern "C" {
   uint8_t* switch_task(uint8_t* sp) {
     using namespace B;
-    _tasks[current_task]->sp = sp;
-    if (_tasks[current_task]->id < 0) {
-      free_task(current_task);
+    _tasks[_current_task]->sp = sp;
+    if (_tasks[_current_task]->id < 0) {
+      free_task(_current_task);
     }
-    current_task = next_task;
-    sp = _tasks[current_task]->sp;
+    _current_task = _next_task;
+    sp = _tasks[_current_task]->sp;
     return sp;
   }
 
   void __attribute__((naked)) PendSV_Handler() {
-    asm volatile("cpsid	i");
     asm volatile("push {r4-r7}");
     asm volatile("mov r4,r8");
     asm volatile("mov r5,r9");
@@ -109,7 +108,6 @@ extern "C" {
     asm volatile("mov r11,r7");
     asm volatile("pop {r4-r7}");
 
-    asm volatile("cpsie	i");
     asm volatile("bx lr");
   }
 

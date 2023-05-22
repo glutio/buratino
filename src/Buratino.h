@@ -22,7 +22,7 @@ protected:
   Buratino();
 
 public:
-  static int8_t RunTask(BTask task, BTask::ArgumentType* arg, uint16_t stackSize = 128);
+  static int8_t RunTask(BTask task, BTask::ArgumentType* arg, uint8_t priority, uint16_t stackSize = 128);
   static void Setup(int8_t tasks);
   static void YieldTask();
   static void KillTask(int8_t id);

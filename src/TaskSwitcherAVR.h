@@ -148,12 +148,12 @@ void init_task(BTaskInfo* taskInfo) {
 
 void switch_task() {
   auto next_task = queue_task();
-  if (next_task == current_task) {
+  if (next_task == _current_task) {
     return;
   }
 
-  auto old_task = current_task;
-  current_task = next_task;
+  auto old_task = _current_task;
+  _current_task = next_task;
 
   auto taskInfo = _tasks[old_task];
   // if current task is killed free its memory
@@ -169,7 +169,7 @@ void switch_task() {
 void kill_task(int id) {
   auto sreg = disable();
   if (id > 0 && id < _tasks.Length() && _tasks[id]) {
-    if (id != current_task) {
+    if (id != _current_task) {
       free_task(id);
     } else {
       _tasks[id]->id = -1;

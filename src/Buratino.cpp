@@ -7,11 +7,11 @@ Buratino::Buratino()
   : _initialized(false), _cli(3) {
 }
 
-int8_t Buratino::RunTask(BTask task, BTask::ArgumentType* arg, uint16_t stackSize) {
+int8_t Buratino::RunTask(BTask task, BTask::ArgumentType* arg, uint8_t priority, uint16_t stackSize) {
   if (!_instance._initialized) {
     return -1;
   }
-  return _taskSwitcher.RunTask(task, arg, stackSize);
+  return _taskSwitcher.RunTask(task, arg, priority, stackSize);
 }
 
 void Buratino::Setup(int8_t tasks) {
