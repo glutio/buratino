@@ -4,29 +4,26 @@
 #include "BTaskSwitcher.h"
 
 namespace B {
+static BList<BTaskInfo*> _tasks;
+static int current_task = 0;
 
-int8_t context_size();
-void __attribute__((naked)) switch_context(uint8_t**, uint8_t*);
-int init_task(BTaskInfo*);
-void init_arch();
-bool disable();
+static void restore(bool);
+static void free_task(int);
+static void task_wrapper(BTaskInfo*);
+static int queue_task();
+}
 
-void restore(bool enable) {
+#include "TaskSwitcherAVR.h"
+#include "TaskSwitcherSAMD.h"
+
+namespace B {
+
+static void restore(bool enable) {
   if (enable) interrupts();
   else noInterrupts();
 }
 
-BList<BTaskInfo*> _tasks;
-int current_task = 0;
-
-BTaskInfo* alloc_task(uintptr_t stackSize) {
-  auto size = sizeof(BTaskInfo) + (stackSize - 1) + context_size();
-  auto block = new uint8_t[size];  // aign on pointer size
-  auto taskInfo = new (block) BTaskInfo();
-  return taskInfo;
-}
-
-void free_task(int id) {
+static void free_task(int id) {
   _tasks[id]->~BTaskInfo();
   delete[](uint8_t*) _tasks[id];
   _tasks[id] = 0;
@@ -39,58 +36,26 @@ int current_task_id() {
   return id;
 }
 
-void switch_task() {
-  // switch_task assumes interrupts are disabled
+static int queue_task() {
   auto next_task = current_task;
   do {
     next_task = (next_task + 1) % _tasks.Length();
   } while (!_tasks[next_task] || _tasks[next_task]->id < 0);
 
-  if (next_task == current_task) {
-    return;
-  }
-
-  auto old_task = current_task;
-  current_task = next_task;
-
-  auto taskInfo = _tasks[old_task];
-  // if current task is killed free its memory
-  if (taskInfo->id < 0) {
-    free_task(old_task);
-  }
-
-  switch_context(&taskInfo->sp, _tasks[next_task]->sp);
-  // current task switches back here
+  return next_task;
 }
 
-void kill_task(int id) {
-  auto sreg = disable();
-  if (id > 0 && id < _tasks.Length() && _tasks[id]) {
-    if (id != current_task) {
-      free_task(id);
-    } else {
-      _tasks[id]->id = -1;
-      switch_task();
-      // should not reach here
-    }
-  }
-  restore(sreg);
-}
-
-void yield_task() {
-  auto sreg = disable();
-  switch_task();
-  restore(sreg);
-}
-
-// used by arduino's delay()
-void yield() {
-  yield_task();
-}
-
-void task_wrapper(BTaskInfo* taskInfo) {
+static void task_wrapper(BTaskInfo* taskInfo) {
   taskInfo->delegate(0, taskInfo->arg);
   kill_task(current_task_id());
+}
+
+static BTaskInfo* alloc_task(uintptr_t stackSize) {
+  auto size = (stackSize - 1) + sizeof(Ctx);
+  auto block = new uint8_t[sizeof(BTaskInfo) + size];
+  auto taskInfo = new (block) BTaskInfo();
+  taskInfo->sp = &taskInfo->stack[size - 1];
+  return taskInfo;
 }
 
 int run_task(BTask& task, BTask::ArgumentType* arg, uintptr_t stackSize) {
@@ -110,14 +75,13 @@ int run_task(BTask& task, BTask::ArgumentType* arg, uintptr_t stackSize) {
   taskInfo->id = new_task;
   taskInfo->delegate = task;
   taskInfo->arg = arg;
-  taskInfo->sp = &taskInfo->stack[stackSize - 1];
 
   init_task(taskInfo);
   restore(sreg);
   return new_task;
 }
 
-void initialize(int tasks) {
+static void initialize(int tasks) {
   _tasks.Resize(tasks + 1);  // 1 for main loop()
 
   // add the initial loop() task
@@ -128,6 +92,12 @@ void initialize(int tasks) {
 }
 
 }
+
+//used by arduino's delay()
+void yield() {
+  B::yield_task();
+}
+
 
 BTaskSwitcher::BTaskSwitcher() {
 }

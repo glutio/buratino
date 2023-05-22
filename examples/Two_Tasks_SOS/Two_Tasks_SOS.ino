@@ -5,13 +5,16 @@ BDigitalPin led(LED_BUILTIN, BPinMode::Output, BPinTrigger::Never);
 // synchronize access to this shared global variable
 BSync<bool> dash = true;
 
+#define SerialUSB Serial
+
 void Dots(Buratino* a, void* b) {
 
   while(1) {
     noInterrupts();
     SerialUSB.println("dots");
     interrupts();
-    Buratino::YieldTask();
+    delay(1000);
+    //Buratino::YieldTask();
 
     // if (!dash) {
     //   auto ct=3;
@@ -31,7 +34,8 @@ void Dashes(Buratino* a, void* b) {
     noInterrupts();
     SerialUSB.println("dashes");
     interrupts();
-    Buratino::YieldTask();
+    delay(1000);
+    //Buratino::YieldTask();
   //  if (dash) {
   //     auto ct=3;
   //     while(ct-->0) {
@@ -48,17 +52,19 @@ void Dashes(Buratino* a, void* b) {
 void setup() {
   SerialUSB.begin(115200);
   noInterrupts();
-  led.Reset(1);
+//  led.Reset(1);
   Buratino::Setup(1 /* number of tasks */);  // also sets up task switcher interrupt
-  Buratino::RunTask(BTask(Dashes), 0, 2024);
-  Buratino::RunTask(BTask(Dots), 0, 2024);
+  Buratino::RunTask(BTask(Dashes), 0, 512);
+  Buratino::RunTask(BTask(Dots), 0, 512);
   interrupts();
+  delay(1000);
 }
 
 void loop() {
-  Buratino::YieldTask();
+  //Buratino::YieldTask();
   noInterrupts();
-  SerialUSB.println("loop"); //delay(1000);
+  SerialUSB.println("loop1"); //delay(1000);
   interrupts();
+  delay(1000);
   //Buratino::YieldTask();
 }

@@ -4,8 +4,8 @@
 #include "BTaskSwitcher.h"
 
 namespace B {
-  bool disable();
-  void restore(bool);
+bool disable();
+void restore(bool);
 }
 
 template<typename T>
@@ -275,6 +275,35 @@ public:
     T& result = _value[index];
     B::restore(sreg);
     return result;
+  }
+
+
+  BSync operator+(const T& rhs) const {
+    auto sreg = B::disable();
+    BSync temp(_value + rhs);
+    B::restore(sreg);
+    return temp;
+  }
+
+  BSync operator-(const T& rhs) const {
+    auto sreg = B::disable();
+    BSync temp(_value - rhs);
+    B::restore(sreg);
+    return temp;  
+    }
+
+  BSync operator*(const T& rhs) const {
+    auto sreg = B::disable();
+    BSync temp(_value * rhs);
+    B::restore(sreg);
+    return temp;  
+  }
+
+  BSync operator/(const T& rhs) const {
+    auto sreg = B::disable();
+    BSync temp(_value / rhs);
+    B::restore(sreg);
+    return temp;  
   }
 };
 
