@@ -1,13 +1,8 @@
-#include "Buratino.h"
-
-BDigitalPin led(LED_BUILTIN, BPinMode::Output, BPinTrigger::Never);
-
 // synchronize access to this shared global variable
-BSync<bool> dash = true;
-
+#include "BTaskSwitcher.h"
 #define SerialUSB Serial
 
-void Dots(Buratino* a, void* b) {
+void Dots(void* b) {
 
   while(1) {
     noInterrupts();
@@ -29,7 +24,7 @@ void Dots(Buratino* a, void* b) {
   }
 }
 
-void Dashes(Buratino* a, void* b) {
+void Dashes(void* b) {
   while(1) {
     noInterrupts();
     SerialUSB.println("dashes");
@@ -52,10 +47,9 @@ void Dashes(Buratino* a, void* b) {
 void setup() {
   SerialUSB.begin(115200);
   noInterrupts();
-//  led.Reset(1);
-  Buratino::Setup(1 /* number of tasks */);  // also sets up task switcher interrupt
-  Buratino::RunTask(BTask(Dashes), 0, 512);
-  Buratino::RunTask(BTask(Dots), 0, 512);
+  setupTasks(2);
+  runTask(Dots, (void*)0, 1, 640);
+  runTask(Dashes, (void*)0, 1, 640);
   interrupts();
   //delay(1000);
 }
@@ -63,7 +57,7 @@ void setup() {
 void loop() {
   //Buratino::YieldTask();
   noInterrupts();
-  SerialUSB.println("loop1"); //delay(1000);
+  SerialUSB.println("loop"); //delay(1000);
   interrupts();
   delay(10);
   //Buratino::YieldTask();
