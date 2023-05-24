@@ -153,9 +153,8 @@ void BTaskSwitcher::schedule_task() {
     return;
   }
 
-  _next_task = _current_task;
+  _next_task = next_task;
   switch_context();
-  Serial.println(_current_task);
 
   // current task switches back here
 }
