@@ -8,7 +8,7 @@ void Dots(void* b) {
     noInterrupts();
     SerialUSB.println("dots");
     interrupts();
-    delay(10);
+    delay(1000);
     //Buratino::YieldTask();
 
     // if (!dash) {
@@ -29,7 +29,7 @@ void Dashes(void* b) {
     noInterrupts();
     SerialUSB.println("dashes");
     interrupts();
-    delay(10);
+    delay(1000);
     //Buratino::YieldTask();
   //  if (dash) {
   //     auto ct=3;
@@ -57,8 +57,8 @@ void setup() {
 void loop() {
   //Buratino::YieldTask();
   noInterrupts();
-  SerialUSB.println("loop"); //delay(1000);
+  SerialUSB.println("loop");
   interrupts();
-  delay(10);
+  delay(1000);
   //Buratino::YieldTask();
 }

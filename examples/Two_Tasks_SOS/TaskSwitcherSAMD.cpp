@@ -99,17 +99,6 @@ void BTaskSwitcher::init_arch() {
   _next_task = _current_task;
 }
 
-uint8_t* BTaskSwitcher::switch_task(uint8_t* sp) {
-  if (_tasks[_current_task]->id < 0) {
-    free_task(_current_task);
-  } else {
-    _tasks[_current_task]->sp = sp;
-  }
-  _current_task = _next_task;
-  sp = _tasks[_current_task]->sp;
-  return sp;
-}
-
 extern "C" {
 
   void __attribute__((naked)) PendSV_Handler() {

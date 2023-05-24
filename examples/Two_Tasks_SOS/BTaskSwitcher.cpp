@@ -61,6 +61,17 @@ int BTaskSwitcher::get_next_task() {
   return next_task;
 }
 
+uint8_t* BTaskSwitcher::switch_task(uint8_t* sp) {
+  if (_tasks[_current_task]->id < 0) {
+    free_task(_current_task);
+  } else {
+    _tasks[_current_task]->sp = sp;
+  }
+  _current_task = _next_task;
+  sp = _tasks[_current_task]->sp;
+  return sp;
+}
+
 void BTaskSwitcher::initialize(unsigned tasks) {
   _tasks.Resize(tasks + 1);  // 1 for main loop()
 
@@ -82,5 +93,5 @@ void setupTasks(unsigned tasks) {
 
 //used by arduino's delay()
 void yield() {
-  // B::yield_task();
+  BTaskSwitcher::yield_task();
 }

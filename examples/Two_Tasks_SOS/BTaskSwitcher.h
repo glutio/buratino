@@ -5,6 +5,7 @@
 #include "BTask.h"
 #include "BList.h"
 #include "TaskSwitcherSAMD.h"
+#include "TaskSwitcherAVR.h"
 
 __BTASKSWITCHER_ARCH_HEADER__
 
@@ -16,6 +17,7 @@ struct TaskPriority {
 
 template<typename T>
 int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize);
+extern "C" void yield();
 
 class BTaskSwitcher {
 protected:
@@ -58,6 +60,8 @@ protected:
   static void kill_task(int id);
   static void init_arch();
   static void init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper);
+  static uint8_t* switch_task(uint8_t* sp);
+  static void schedule_task();
 
   template<typename T>
   static BTaskInfoBase* alloc_task(BTask<T> task, typename BTask<T>::ArgumentType arg, unsigned stackSize) {
@@ -110,6 +114,7 @@ protected:
   friend int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize);
   friend void killTask(int id);
   friend void setupTasks(unsigned tasks);
+  friend void yield();
 
   __BTASKSWITCHER_ARCH_CLASS__
 };
