@@ -66,7 +66,7 @@ void BTaskSwitcher::yield_task() {
   asm volatile("push {r3}");  // lr
   asm volatile("push {r3}");  // r12
   asm volatile("push {r0-r3}");
-  asm volatile("bl PendSV_Handler");
+  asm volatile("blx PendSV_Handler");
   // //schedule_task();
   asm volatile("pop {r0-r3}");
   asm volatile("pop {r3}");  // r12
@@ -111,7 +111,7 @@ extern "C" {
 
     asm volatile("mov r0, sp");
     asm volatile("push {lr}");
-    asm volatile("bx %0" : : "r"(BTaskSwitcher::switch_task) : "r0");
+    asm volatile("blx %0" : : "r"(BTaskSwitcher::switch_task) : "r0");
     asm volatile("mov r12, r0");
     asm volatile("pop {r0}");
     asm volatile("mov lr, r0");
