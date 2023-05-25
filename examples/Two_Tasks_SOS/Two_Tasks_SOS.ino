@@ -1,64 +1,61 @@
 // synchronize access to this shared global variable
 #include "BTaskSwitcher.h"
+//#include "BSync.h"
+
 #define SerialUSB Serial
 
+//BSync<bool> dashes(false);
+
 void Dots(int b) {
-
-  while(1) {
-    noInterrupts();
-    SerialUSB.println("dots");
-    interrupts();
-    delay(1000);
-    //Buratino::YieldTask();
-
-    // if (!dash) {
-    //   auto ct=3;
-    //   while(ct-->0) {
-    //     led(HIGH);
-    //     delay(200);
-    //     led(LOW);
-    //     delay(200);
-    //   }
-    //   dash = true;
-    // }
+  while (1) {
+    //if (!dashes) {
+      // delay(1000);
+      // digitalWrite(LED_BUILTIN, LOW);
+      // delay(1000);
+      // digitalWrite(LED_BUILTIN, HIGH);
+      // delay(1000);
+      // digitalWrite(LED_BUILTIN, LOW);
+      // delay(1000);
+      // digitalWrite(LED_BUILTIN, HIGH);
+      // delay(1000);
+      digitalWrite(LED_BUILTIN, LOW);
+      //dashes = true;
+    //}
   }
 }
 
 void Dashes(int b) {
-  while(1) {
-    noInterrupts();
-    SerialUSB.println("dashes");
-    interrupts();
-    delay(1000);
-    //Buratino::YieldTask();
-  //  if (dash) {
-  //     auto ct=3;
-  //     while(ct-->0) {
-  //       led(LOW);
-  //       //delay(700);
-  //       led(HIGH);
-  //       //(700);
-  //     }
-  //    dash = false;
-  //  }
+  while (1) {
+    //if (dashes) {
+      // delay(200);
+      // digitalWrite(LED_BUILTIN, LOW);
+      // delay(200);
+      // digitalWrite(LED_BUILTIN, HIGH);
+      // delay(200);
+      // digitalWrite(LED_BUILTIN, LOW);
+      // delay(200);
+      // digitalWrite(LED_BUILTIN, HIGH);
+      // delay(200);
+      // digitalWrite(LED_BUILTIN, LOW);
+      // delay(200);
+      // digitalWrite(LED_BUILTIN, HIGH);
+      // dashes = false;
+    //}
   }
 }
 
 void setup() {
-  //SerialUSB.begin(115200);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  // SerialUSB.begin(115200);
   noInterrupts();
   setupTasks(2);
-  runTask(Dots, 0, 0, 640);
-  runTask(Dashes, 0, 0, 640);
+  runTask(Dots, 0, 0, 2048);
+  runTask(Dashes, 0, 0, 2048);
   interrupts();
   //delay(1000);
 }
 
 void loop() {
-  //Buratino::YieldTask();
-  noInterrupts();
-  SerialUSB.println("loop");
-  interrupts();
-  delay(1000);
-  //Buratino::YieldTask();
+
 }

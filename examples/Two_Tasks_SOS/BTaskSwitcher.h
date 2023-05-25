@@ -113,11 +113,14 @@ protected:
     restore(sreg);
     return new_task;
   }
+
   template<typename T>
   friend int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize);
   friend void killTask(int id);
   friend void setupTasks(unsigned tasks);
   friend void yield();
+  template<typename T>
+  friend class BSync;
 
   __BTASKSWITCHER_ARCH_CLASS__
 };

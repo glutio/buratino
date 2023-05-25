@@ -27,7 +27,7 @@ unsigned BTaskSwitcher::context_size()
 }
 
 bool BTaskSwitcher::disable() {
-  auto enabled = __get_PRIMASK();
+  auto enabled = __get_PRIMASK() == 0;
   noInterrupts();
   return enabled;
 }
@@ -55,35 +55,38 @@ void BTaskSwitcher::schedule_task() {
   }
   _next_task = next_task;
 
-  //SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+  SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
 void BTaskSwitcher::yield_task() {
   if (!_initialized) {
     return;
   }
+  
+  auto sreg = disable();
   schedule_task();
-  asm volatile("push {lr}");
-  asm volatile("mrs r3, psr");
-  asm volatile("push {r3}");  //psr
-  asm volatile("ldr r3, =_Return");
-  asm volatile("push {r3}");  // pc
-  asm volatile("push {r3}");  // lr
-  asm volatile("push {r3}");  // r12
-  asm volatile("push {r0-r3}");
-  asm volatile("blx PendSV_Handler");
-  //schedule_task();
-  asm volatile("pop {r0-r3}");
-  asm volatile("pop {r3}");  // r12
-  asm volatile("pop {r3}");  // lr
-  asm volatile("pop {r3}");  // pc
-  asm volatile("mov r12, r3");
-  asm volatile("pop {r3}");  // psr
-  asm volatile("msr psr, r3");
-  asm volatile("pop {r3}");  // real lr
-  asm volatile("mov lr, r3");
-  asm volatile("mov pc, r12");
-  asm volatile("_Return:");
+  restore(sreg);
+  // asm volatile("push {lr}");
+  // asm volatile("mrs r3, psr");
+  // asm volatile("push {r3}");  //psr
+  // asm volatile("ldr r3, =_Return");
+  // asm volatile("push {r3}");  // pc
+  // asm volatile("push {r3}");  // lr
+  // asm volatile("push {r3}");  // r12
+  // asm volatile("push {r0-r3}");
+  // asm volatile("blx PendSV_Handler");
+  // //schedule_task();
+  // asm volatile("pop {r0-r3}");
+  // asm volatile("pop {r3}");  // r12
+  // asm volatile("pop {r3}");  // lr
+  // asm volatile("pop {r3}");  // pc
+  // asm volatile("mov r12, r3");
+  // asm volatile("pop {r3}");  // psr
+  // asm volatile("msr psr, r3");
+  // asm volatile("pop {r3}");  // real lr
+  // asm volatile("mov lr, r3");
+  // asm volatile("mov pc, r12");
+  // asm volatile("_Return:");
   return;
 }
 
@@ -120,7 +123,8 @@ extern "C" {
   }
 
   int sysTickHook() {
-    //BTaskSwitcher::yield_task();
+    //SerialUSB.println(__get_PRIMASK());
+    BTaskSwitcher::yield_task();
     return 0;
   }
 }
