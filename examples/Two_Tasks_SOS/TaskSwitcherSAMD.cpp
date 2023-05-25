@@ -27,7 +27,7 @@ unsigned BTaskSwitcher::context_size()
 }
 
 bool BTaskSwitcher::disable() {
-  auto enabled = interruptsStatus();
+  auto enabled = __get_PRIMASK();
   noInterrupts();
   return enabled;
 }
@@ -54,10 +54,15 @@ void BTaskSwitcher::schedule_task() {
     return;
   }
   _next_task = next_task;
-  SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+
+  //SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
 void BTaskSwitcher::yield_task() {
+  if (!_initialized) {
+    return;
+  }
+  schedule_task();
   asm volatile("push {lr}");
   asm volatile("mrs r3, psr");
   asm volatile("push {r3}");  //psr
@@ -67,32 +72,19 @@ void BTaskSwitcher::yield_task() {
   asm volatile("push {r3}");  // r12
   asm volatile("push {r0-r3}");
   asm volatile("blx PendSV_Handler");
-  // //schedule_task();
+  //schedule_task();
   asm volatile("pop {r0-r3}");
   asm volatile("pop {r3}");  // r12
   asm volatile("pop {r3}");  // lr
   asm volatile("pop {r3}");  // pc
-  asm volatile("mov r0, r3");
+  asm volatile("mov r12, r3");
   asm volatile("pop {r3}");  // psr
   asm volatile("msr psr, r3");
   asm volatile("pop {r3}");  // real lr
   asm volatile("mov lr, r3");
-  asm volatile("mov pc, r0");
+  asm volatile("mov pc, r12");
   asm volatile("_Return:");
   return;
-}
-
-void BTaskSwitcher::kill_task(int id) {
-  auto sreg = disable();
-  if (id > 0 && id < _tasks.Length() && _tasks[id]) {
-    if (id != _current_task) {
-      free_task(id);
-    } else {
-      _tasks[id]->id = -1;
-    }
-    yield_task();
-  }
-  restore(sreg);
 }
 
 void BTaskSwitcher::init_arch() {
@@ -128,7 +120,7 @@ extern "C" {
   }
 
   int sysTickHook() {
-    BTaskSwitcher::schedule_task();
+    //BTaskSwitcher::yield_task();
     return 0;
   }
 }

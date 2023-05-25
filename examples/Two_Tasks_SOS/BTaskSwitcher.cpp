@@ -3,10 +3,11 @@
 #include "BTask.h"
 #include "BTaskSwitcher.h"
 
+bool BTaskSwitcher::_initialized = false;
 BList<BTaskSwitcher::BTaskInfoBase*> BTaskSwitcher::_tasks;
 unsigned BTaskSwitcher::_current_task = 0;
 unsigned BTaskSwitcher::_next_task = 0;
-BTaskSwitcher::BSwitchState BTaskSwitcher::_pri[3] = {0};
+BTaskSwitcher::BSwitchState BTaskSwitcher::_pri[3] = { 0 };
 
 void BTaskSwitcher::restore(bool enable) {
   if (enable) interrupts();
@@ -25,6 +26,19 @@ void BTaskSwitcher::free_task(int id) {
   _tasks[id]->~BTaskInfoBase();
   delete[](uint8_t*) _tasks[id];
   _tasks[id] = 0;
+}
+
+void BTaskSwitcher::kill_task(int id) {
+  auto sreg = disable();
+  if (id > 0 && id < _tasks.Length() && _tasks[id]) {
+    if (id != _current_task) {
+      free_task(id);
+    } else {
+      _tasks[id]->id = -1;
+      yield_task();
+    }
+  }
+  restore(sreg);
 }
 
 int BTaskSwitcher::get_next_task() {
@@ -73,6 +87,7 @@ uint8_t* BTaskSwitcher::switch_task(uint8_t* sp) {
 }
 
 void BTaskSwitcher::initialize(unsigned tasks) {
+  if (_initialized)
   _tasks.Resize(tasks + 1);  // 1 for main loop()
 
   // add the initial loop() task
@@ -81,6 +96,8 @@ void BTaskSwitcher::initialize(unsigned tasks) {
   _tasks[0]->priority = TaskPriority::Medium;
   _pri[_tasks[0]->priority].count = 1;
   init_arch();
+  
+  _initialized = true;
 }
 
 void killTask(int id) {

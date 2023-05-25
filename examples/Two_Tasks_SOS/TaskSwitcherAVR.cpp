@@ -159,20 +159,6 @@ void BTaskSwitcher::schedule_task() {
   // current task switches back here
 }
 
-void BTaskSwitcher::kill_task(int id) {
-  auto sreg = disable();
-  if (id > 0 && id < _tasks.Length() && _tasks[id]) {
-    if (id != _current_task) {
-      free_task(id);
-    } else {
-      _tasks[id]->id = -1;
-      schedule_task();
-      // should not reach here
-    }
-  }
-  restore(sreg);
-}
-
 void BTaskSwitcher::yield_task() {
   auto sreg = disable();
   schedule_task();

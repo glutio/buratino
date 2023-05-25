@@ -20,6 +20,8 @@ int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize);
 extern "C" void yield();
 
 class BTaskSwitcher {
+  friend void setup();
+  friend void loop();
 protected:
   struct BTaskInfoBase {
     uint8_t* sp;
@@ -43,6 +45,7 @@ protected:
   typedef void (*BTaskWrapper)(BTaskInfoBase*);
 
 protected:
+  static bool _initialized;
   static BList<BTaskInfoBase*> _tasks;
   static unsigned _current_task;
   static unsigned _next_task;
@@ -84,7 +87,7 @@ protected:
 
   template<typename T>
   static int run_task(BTask<T> task, typename BTask<T>::ArgumentType arg, uint8_t priority, unsigned stackSize) {
-    if (priority > TaskPriority::Low) {
+    if (!_initialized || priority > 2 || !stackSize) {
       return -1;
     }
 

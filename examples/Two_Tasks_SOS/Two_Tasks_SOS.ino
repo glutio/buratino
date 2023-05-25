@@ -2,7 +2,7 @@
 #include "BTaskSwitcher.h"
 #define SerialUSB Serial
 
-void Dots(void* b) {
+void Dots(int b) {
 
   while(1) {
     noInterrupts();
@@ -24,7 +24,7 @@ void Dots(void* b) {
   }
 }
 
-void Dashes(void* b) {
+void Dashes(int b) {
   while(1) {
     noInterrupts();
     SerialUSB.println("dashes");
@@ -45,11 +45,11 @@ void Dashes(void* b) {
 }
 
 void setup() {
-  SerialUSB.begin(115200);
+  //SerialUSB.begin(115200);
   noInterrupts();
   setupTasks(2);
-  runTask(Dots, (void*)0, 1, 640);
-  runTask(Dashes, (void*)0, 1, 640);
+  runTask(Dots, 0, 0, 640);
+  runTask(Dashes, 0, 0, 640);
   interrupts();
   //delay(1000);
 }
