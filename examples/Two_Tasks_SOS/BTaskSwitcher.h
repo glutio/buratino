@@ -45,10 +45,11 @@ protected:
   typedef void (*BTaskWrapper)(BTaskInfoBase*);
 
 protected:
-  static bool _initialized;
+  static volatile bool _initialized;
   static BList<BTaskInfoBase*> _tasks;
-  static unsigned _current_task;
-  static unsigned _next_task;
+  static volatile unsigned _current_task;
+  static volatile unsigned _next_task;
+  static volatile unsigned _yielded_task;
   static BSwitchState _pri[3];
 
 protected:
@@ -64,10 +65,12 @@ protected:
   static void init_arch();
   static void init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper);
   static uint8_t* switch_task(uint8_t* sp);
+  static void switch_context();
   static void schedule_task();
 
   template<typename T>
   static BTaskInfoBase* alloc_task(BTask<T> task, typename BTask<T>::ArgumentType arg, unsigned stackSize) {
+    Serial.println("alloc_task");
     auto size = sizeof(BTaskInfo<T>) + stackSize + context_size();
     auto block = new uint8_t[size];
     auto taskInfo = new (block) BTaskInfo<T>();
@@ -87,6 +90,7 @@ protected:
 
   template<typename T>
   static int run_task(BTask<T> task, typename BTask<T>::ArgumentType arg, uint8_t priority, unsigned stackSize) {
+    Serial.println("run_task");
     if (!_initialized || priority > 2 || !stackSize) {
       return -1;
     }
@@ -128,6 +132,7 @@ protected:
 
 template<typename T>
 int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize) {
+  Serial.println("runTask");
   BTaskSwitcher::run_task<T>(BTask<T>(task), arg, priority, stackSize);
 }
 

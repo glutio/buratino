@@ -21,8 +21,7 @@ struct Ctx {
   uint32_t psr;
 };
 
-unsigned BTaskSwitcher::context_size()
-{
+unsigned BTaskSwitcher::context_size() {
   return sizeof(Ctx);
 }
 
@@ -48,46 +47,8 @@ void BTaskSwitcher::init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper) {
   ctx->pc = (uintptr_t)wrapper;
 }
 
-void BTaskSwitcher::schedule_task() {
-  if (!_initialized) {
-    return;
-  }
-
-  auto next_task = get_next_task();
-  if (next_task == _current_task) {
-    return;
-  }
-  _next_task = next_task;
-
+void BTaskSwitcher::switch_context() {
   SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-}
-
-void BTaskSwitcher::yield_task() { 
-  auto sreg = disable();
-  schedule_task();
-  restore(sreg);
-  // asm volatile("push {lr}");
-  // asm volatile("mrs r3, psr");
-  // asm volatile("push {r3}");  //psr
-  // asm volatile("ldr r3, =_Return");
-  // asm volatile("push {r3}");  // pc
-  // asm volatile("push {r3}");  // lr
-  // asm volatile("push {r3}");  // r12
-  // asm volatile("push {r0-r3}");
-  // asm volatile("blx PendSV_Handler");
-  // //schedule_task();
-  // asm volatile("pop {r0-r3}");
-  // asm volatile("pop {r3}");  // r12
-  // asm volatile("pop {r3}");  // lr
-  // asm volatile("pop {r3}");  // pc
-  // asm volatile("mov r12, r3");
-  // asm volatile("pop {r3}");  // psr
-  // asm volatile("msr psr, r3");
-  // asm volatile("pop {r3}");  // real lr
-  // asm volatile("mov lr, r3");
-  // asm volatile("mov pc, r12");
-  // asm volatile("_Return:");
-  return;
 }
 
 void BTaskSwitcher::init_arch() {
@@ -106,7 +67,12 @@ extern "C" {
 
     asm volatile("mov r0, sp");
     asm volatile("push {lr}");
-    asm volatile("blx %0" : : "r"(BTaskSwitcher::switch_task) : "r0");
+    asm volatile("cpsid i");
+    asm volatile("blx %0"
+                 :
+                 : "r"(BTaskSwitcher::switch_task)
+                 : "r0");
+    asm volatile("cpsie i");
     asm volatile("mov r12, r0");
     asm volatile("pop {r0}");
     asm volatile("mov lr, r0");
@@ -123,7 +89,6 @@ extern "C" {
   }
 
   int sysTickHook() {
-    //SerialUSB.println(__get_PRIMASK());
     BTaskSwitcher::schedule_task();
     return 0;
   }

@@ -14,12 +14,18 @@ public:
   // Constructor
   explicit BPtr(T* p = nullptr)
     : ptr(p), refCount(new int(1)) {
+    Serial.print("ctor");
+    Serial.print(" ");
+    Serial.println(*refCount);
   }
 
   // Copy constructor
   BPtr(const BPtr& other)
     : ptr(other.ptr), refCount(other.refCount) {
     (*refCount)++;
+    Serial.print("copy ctor");
+    Serial.print(" ");
+    Serial.println(*refCount);
   }
 
   // Assignment operator
@@ -38,6 +44,9 @@ public:
       ptr = other.ptr;
       refCount = other.refCount;
       (*refCount)++;
+      Serial.print("assignment");
+      Serial.print(" ");
+      Serial.println(*refCount);
     }
     return *this;
   }
@@ -45,6 +54,10 @@ public:
   // Destructor
   ~BPtr() {
     (*refCount)--;
+    Serial.print("destructor");
+    Serial.print(" ");
+    Serial.println(*refCount);
+
     if (*refCount == 0) {
       delete ptr;
       delete refCount;

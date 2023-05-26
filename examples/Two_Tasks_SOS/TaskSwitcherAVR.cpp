@@ -148,28 +148,6 @@ void BTaskSwitcher::init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper) {
   ctx->r25 = highByte((uintptr_t)taskInfo);  // r25
 }
 
-void BTaskSwitcher::schedule_task() {
-  if (!_initialized) {
-    return;
-  }
-
-  auto next_task = get_next_task();
-  if (next_task == _current_task) {
-    return;
-  }
-
-  _next_task = next_task;
-  switch_context();
-  
-  // current task switches back here
-}
-
-void BTaskSwitcher::yield_task() {
-  auto sreg = disable();
-  schedule_task();
-  restore(sreg);
-}
-
 void BTaskSwitcher::init_arch() {
   auto sreg = disable();
 
