@@ -58,7 +58,7 @@ int BTaskSwitcher::get_next_task() {
   else if (dice < med) pri = TaskPriority::Medium;
   else pri = TaskPriority::Low;
 
-  if (!_pri[pri].count) {
+  if (!_pri[pri].count || (_pri[pri].count == 1 && _pri[pri].current == _yielded_task)) {
     const auto len = sizeof(_pri) / sizeof(_pri[0]);
     int i;
     for (i = pri + 1; i < len; ++i) {
@@ -69,7 +69,13 @@ int BTaskSwitcher::get_next_task() {
         if (_pri[i].count) break;
       }
     }
-    pri = i;
+    if (i >= 0 && i < len) {
+      pri = i;
+    }
+    else
+    {
+      return _pri[i].current;
+    }
   }
 
   auto next_task = _pri[pri].current;
@@ -84,7 +90,7 @@ int BTaskSwitcher::get_next_task() {
   return next_task;
 }
 
-uint8_t* BTaskSwitcher::switch_task(uint8_t* sp) {
+uint8_t* BTaskSwitcher::swap_stack(uint8_t* sp) {
   if (_tasks[_current_task]->id < 0) {
     free_task(_current_task);
   } else {

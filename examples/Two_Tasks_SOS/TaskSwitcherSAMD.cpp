@@ -70,7 +70,7 @@ extern "C" {
     asm volatile("cpsid i");
     asm volatile("blx %0"
                  :
-                 : "r"(BTaskSwitcher::switch_task)
+                 : "r"(BTaskSwitcher::swap_stack)
                  : "r0");
     asm volatile("cpsie i");
     asm volatile("mov r12, r0");

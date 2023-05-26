@@ -88,7 +88,7 @@ void __attribute__((naked)) BTaskSwitcher::switch_context() {
   asm volatile("in r25, __SP_H__");
   asm volatile("call %x0"
                :
-               : "i"(switch_task));
+               : "i"(swap_stack));
   asm volatile("out __SP_L__, r24");
   asm volatile("out __SP_H__, r25");
   asm volatile("pop r31");

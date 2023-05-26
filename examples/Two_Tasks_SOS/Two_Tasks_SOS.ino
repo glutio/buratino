@@ -2,8 +2,6 @@
 #include "BTaskSwitcher.h"
 #include "BSync.h"
 
-#define SerialUSB Serial
-
 BSync<bool> dashes(false);
 
 void Dots(int b) {
@@ -30,7 +28,6 @@ void Dashes(int a) {
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
-  SerialUSB.begin(115200);
   noInterrupts();
   setupTasks(2);
   
@@ -41,6 +38,5 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("hello");
   delay(5000);
 }
