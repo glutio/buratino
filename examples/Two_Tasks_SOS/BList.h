@@ -40,7 +40,7 @@ public:
     }
     --_count;
   }
-  
+
   unsigned Length() {
     return _count;
   }
@@ -51,14 +51,27 @@ public:
 
   void Resize(unsigned capacity) {
     T* array = new T[capacity];
-    for (auto i = 0; i < _capacity; ++i) {
+    for (auto i = 0; i < min(capacity, _capacity); ++i) {
       array[i] = _array[i];
     }
     delete[] _array;
     _array = array;
     _capacity = capacity;
   }
-};
 
+  void Compact(T filter) {
+    for (auto i = 0; i < _count; ++i) {
+      if (_array[i] == filter) {
+        for (auto j = i + 1; j < _count; j++) {
+          if (_array[j] != filter) {
+            _array[i++] = _array[j];
+          }
+        }
+        _count = i;
+        break;
+      }
+    }
+  }
+};
 
 #endif

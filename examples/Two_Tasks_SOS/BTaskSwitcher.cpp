@@ -39,6 +39,8 @@ void BTaskSwitcher::kill_task(int id) {
     } else {
       _tasks[id]->id = -1;
       yield_task();
+      while (1)
+        ;
     }
   }
   restore(sreg);
@@ -76,10 +78,7 @@ int BTaskSwitcher::get_next_task() {
     if (next_task == _tasks.Length()) {
       next_task = 0;
     }
-    if (next_task == _pri[pri].current) {
-      break;  // did not find a task to switch to
-    }
-  } while (next_task == _yielded_task || !_tasks[next_task] || _tasks[next_task]->id < 0 || _tasks[next_task]->priority != pri);
+  } while (next_task != _pri[pri].current && (next_task == _yielded_task || !_tasks[next_task] || _tasks[next_task]->id < 0 || _tasks[next_task]->priority != pri));
   _pri[pri].current = next_task;
 
   return next_task;

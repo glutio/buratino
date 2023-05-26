@@ -84,8 +84,6 @@ protected:
   static void task_wrapper(BTaskInfo<T>* taskInfo) {
     taskInfo->delegate(taskInfo->arg);
     kill_task(current_task_id());
-    while (1)
-      ;
   }
 
   template<typename T>
@@ -128,7 +126,6 @@ protected:
 
   __BTASKSWITCHER_ARCH_CLASS__
 };
-
 
 template<typename T>
 int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize) {

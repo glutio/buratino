@@ -2,7 +2,7 @@
 #include "BTaskSwitcher.h"
 #include "BSync.h"
 
-//#define SerialUSB Serial
+#define SerialUSB Serial
 
 BSync<bool> dashes(false);
 
@@ -17,7 +17,7 @@ void Dots(int b) {
   }
 }
 
-void Dashes(int b) {
+void Dashes(int a) {
   while (1) {
      if (dashes) {
       digitalWrite(LED_BUILTIN, LOW);

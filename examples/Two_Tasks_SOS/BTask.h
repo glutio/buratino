@@ -3,7 +3,7 @@
 
 #include "BPtr.h"
 /*
-  BEvent - a function/method delegate that takes two arguments
+  BTask - a function/method delegate 
 */
 template<typename TArgument>
 class BTask {
