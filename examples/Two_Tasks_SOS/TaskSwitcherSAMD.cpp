@@ -49,6 +49,10 @@ void BTaskSwitcher::init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper) {
 }
 
 void BTaskSwitcher::schedule_task() {
+  if (!_initialized) {
+    return;
+  }
+
   auto next_task = get_next_task();
   if (next_task == _current_task) {
     return;
@@ -58,11 +62,7 @@ void BTaskSwitcher::schedule_task() {
   SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
-void BTaskSwitcher::yield_task() {
-  if (!_initialized) {
-    return;
-  }
-  
+void BTaskSwitcher::yield_task() { 
   auto sreg = disable();
   schedule_task();
   restore(sreg);
@@ -124,7 +124,7 @@ extern "C" {
 
   int sysTickHook() {
     //SerialUSB.println(__get_PRIMASK());
-    BTaskSwitcher::yield_task();
+    BTaskSwitcher::schedule_task();
     return 0;
   }
 }

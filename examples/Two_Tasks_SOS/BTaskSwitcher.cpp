@@ -40,7 +40,7 @@ void BTaskSwitcher::kill_task(int id) {
   }
   restore(sreg);
 }
-static uint p[3]={0};
+
 int BTaskSwitcher::get_next_task() {
   const int high = 50;        //62;
   const int med = high + 33;  //24
@@ -52,9 +52,6 @@ int BTaskSwitcher::get_next_task() {
   if (dice < high) pri = TaskPriority::High;
   else if (dice < med) pri = TaskPriority::Medium;
   else pri = TaskPriority::Low;
-  //p[pri]++;
-  //if (dice % 3 == 0)
-  //SerialUSB.printf("%u %u %u\n", p[0],p[1], p[2]);
 
   if (!_pri[pri].count) {
     const auto len = sizeof(_pri) / sizeof(_pri[0]);

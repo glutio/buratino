@@ -39,8 +39,7 @@ struct Ctx {
   uint8_t r0;
 };
 
-unsigned BTaskSwitcher::context_size()
-{
+unsigned BTaskSwitcher::context_size() {
   return sizeof(Ctx);
 }
 
@@ -87,8 +86,10 @@ void __attribute__((naked)) BTaskSwitcher::switch_context() {
   asm volatile("push r31");
   asm volatile("in r24, __SP_L__");
   asm volatile("in r25, __SP_H__");
-  asm volatile("call %x0" : : "i"(switch_task));
-  asm volatile("out __SP_L__, r24");  
+  asm volatile("call %x0"
+               :
+               : "i"(switch_task));
+  asm volatile("out __SP_L__, r24");
   asm volatile("out __SP_H__, r25");
   asm volatile("pop r31");
   asm volatile("pop r30");
@@ -148,6 +149,10 @@ void BTaskSwitcher::init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper) {
 }
 
 void BTaskSwitcher::schedule_task() {
+  if (!_initialized) {
+    return;
+  }
+
   auto next_task = get_next_task();
   if (next_task == _current_task) {
     return;
@@ -155,7 +160,7 @@ void BTaskSwitcher::schedule_task() {
 
   _next_task = next_task;
   switch_context();
-
+  
   // current task switches back here
 }
 
