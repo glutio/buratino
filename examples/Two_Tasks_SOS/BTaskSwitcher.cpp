@@ -74,7 +74,7 @@ int BTaskSwitcher::get_next_task() {
     }
     else
     {
-      return _pri[i].current;
+      return _pri[pri].current;
     }
   }
 
