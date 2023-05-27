@@ -72,9 +72,11 @@ int BTaskSwitcher::get_next_task() {
     if (i >= 0 && i < len) {
       pri = i;
     }
-    else
+    else 
     {
-      return _pri[pri].current;
+      if (_pri[pri].count == 1 && _pri[pri].current == _current_task && _tasks[_pri[pri].current] && _tasks[_pri[pri].current]->id > 0) {
+        return _current_task;
+      }
     }
   }
 
