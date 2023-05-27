@@ -126,7 +126,7 @@ void BTaskSwitcher::initialize(unsigned tasks) {
     _tasks.Resize(tasks + 1);  // 1 for main loop()
 
     // add the initial loop() task
-    _tasks.Add(alloc_task(BTask<void*>(), 0, 0));  // loop() already has a stack
+    _tasks.Add(new BTaskInfoBase());  // loop() already has a stack
     _tasks[0]->id = 0;
     _tasks[0]->priority = TaskPriority::Medium;
     _pri[_tasks[0]->priority].count = 1;
