@@ -5,38 +5,58 @@
 BSync<bool> dashes(false);
 
 void Dots(int b) {
-  while (1) {
-     if (!dashes) {
-    //   delay(1000);
-       digitalWrite(LED_BUILTIN, HIGH);
-       delay(1000);
-       dashes = true;
-     }
+  //Serial.println("dots");
+  while(1)
+  {
+        noInterrupts();
+      Serial.println("dots");
+      interrupts();
+      delay(1500);
+
   }
 }
 
 void Dashes(int a) {
-  while (1) {
-     if (dashes) {
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(1000);
-       dashes = false;
-     }
-  }
+    // noInterrupts();
+  // BTaskSwitcher::_initialized=false;
+  // interrupts();
+  // digitalWrite(LED_BUILTIN, LOW);
+  dashes=true;
+  while(1) {
+    noInterrupts();
+      Serial.println("dashes");
+      interrupts();
+  delay(1500);
+  };
 }
 
 void setup() {
+  SerialUSB.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(LED_BUILTIN, HIGH);
   noInterrupts();
   setupTasks(2);
   
-  runTask(Dots, 0, 0, 512);
-  runTask(Dashes, 0, 2, 512);
+  runTask(Dots, 0, 0, 1024*5);
+  runTask(Dashes, 0, 2, 1024*5);
   interrupts();
   //delay(1000);
 }
 
 void loop() {
-  delay(5000);
+ if (dashes) {
+  // noInterrupts();
+  // BTaskSwitcher::_initialized=false;
+  // interrupts();
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+ }
 }

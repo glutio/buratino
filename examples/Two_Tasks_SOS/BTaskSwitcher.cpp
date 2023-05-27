@@ -144,7 +144,34 @@ void setupTasks(unsigned tasks) {
   BTaskSwitcher::initialize(tasks);
 }
 
-//used by arduino's delay()
-void yield() {
-  BTaskSwitcher::yield_task();
+void delay( unsigned long ms )
+{
+  if (ms == 0)
+  {
+    return;
+  }
+
+  auto sreg = BTaskSwitcher::disable();
+  uint32_t start = micros();
+  BTaskSwitcher::restore(sreg);
+  while (ms > 0)
+  {
+    yield();
+    while (ms > 0)
+    {
+      sreg = BTaskSwitcher::disable();
+      auto _micros = micros();
+      BTaskSwitcher::restore(sreg);
+      if ((_micros - start) < 1000) {
+        break;
+      }
+      ms--;
+      start += 1000;
+    }
+  }
 }
+
+//used by arduino's delay()
+// void yield() {
+//   BTaskSwitcher::yield_task();
+// }

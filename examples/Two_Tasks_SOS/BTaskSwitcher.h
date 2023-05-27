@@ -20,8 +20,12 @@ int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize);
 extern "C" void yield();
 
 class BTaskSwitcher {
+  friend void Dashes(int a);
+  friend void Dots(int b) ;
   friend void setup();
   friend void loop();
+  friend unsigned long micros();
+  friend void delay( unsigned long ms );
 protected:
   struct BTaskInfoBase {
     uint8_t* sp;
