@@ -67,12 +67,10 @@ extern "C" {
 
     asm volatile("mov r0, sp");
     asm volatile("push {lr}");
-    asm volatile("cpsid i");
     asm volatile("blx %0"
                  :
                  : "r"(BTaskSwitcher::swap_stack)
                  : "r0");
-    asm volatile("cpsie i");
     asm volatile("mov r12, r0");
     asm volatile("pop {r0}");
     asm volatile("mov lr, r0");

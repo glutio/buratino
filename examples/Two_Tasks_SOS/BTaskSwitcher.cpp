@@ -91,6 +91,7 @@ int BTaskSwitcher::get_next_task() {
 }
 
 uint8_t* BTaskSwitcher::swap_stack(uint8_t* sp) {
+  auto sreg = disable();
   if (_tasks[_current_task]->id < 0) {
     free_task(_current_task);
   } else {
@@ -101,6 +102,7 @@ uint8_t* BTaskSwitcher::swap_stack(uint8_t* sp) {
   _yielded_task = -1;
 
   sp = _tasks[_current_task]->sp;
+  restore(sreg);
   return sp;
 }
 
@@ -173,5 +175,5 @@ void delayTask(unsigned long ms) {
 
 //used by arduino's delay()
 void yield() {
-  BTaskSwitcher::yield_task();
+  //BTaskSwitcher::yield_task();
 }

@@ -6,20 +6,20 @@ BSync<bool> dashes(false);
 
 void Dots(int b) {
   while (1) {
-    //SerialUSB.println("dots");
+    SerialUSB.println("dots");
     delayTask(500);
   }
 }
 
 void Dashes(int a) {
   while (1) {
-    //SerialUSB.println("dashes");
+    SerialUSB.println("dashes");
     delayTask(500);
   }
 }
 
 void setup() {
-  //SerialUSB.begin(115200);
+  SerialUSB.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
   setupTasks(2);
@@ -30,6 +30,6 @@ void setup() {
 }
 
 void loop() {
-  //SerialUSB.println("loop");
+  SerialUSB.println("loop");
   delayTask(500);
 }
