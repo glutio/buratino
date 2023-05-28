@@ -34,14 +34,15 @@ void BTaskSwitcher::kill_task(int id) {
   if (id > 0 && id < _tasks.Length() && _tasks[id]) {
     --_pri[_tasks[id]->priority].count;
 
-    if (id != _current_task) {
-      free_task(id);
-    } else {
+    if (id == _current_task) {
       _tasks[id]->id = -1;
       yield_task();
+      restore(sreg);
       while (1)
         ;
     }
+
+    free_task(id);
   }
   restore(sreg);
 }
@@ -69,10 +70,9 @@ int BTaskSwitcher::get_next_task() {
         if (_pri[i].count) break;
       }
     }
-    if (i >= 0 && i < len) { // found another priority level
+    if (i >= 0 && i < len) {  // found another priority level
       pri = i;
-    }
-    else // no other tasks found
+    } else  // no other tasks found
     {
       return _yielded_task;
     }
@@ -81,7 +81,7 @@ int BTaskSwitcher::get_next_task() {
   auto next_task = _pri[pri].current;
   do {
     ++next_task;
-    if (next_task == _tasks.Length()) {
+    if (next_task >= _tasks.Length()) {
       next_task = 0;
     }
   } while (next_task != _pri[pri].current && (next_task == _yielded_task || !_tasks[next_task] || _tasks[next_task]->id < 0 || _tasks[next_task]->priority != pri));
@@ -117,6 +117,7 @@ void BTaskSwitcher::yield_task() {
   auto sreg = disable();
   _yielded_task = _current_task;
   schedule_task();
+  _yielded_task = -1;
   restore(sreg);
   return;
 }
@@ -130,6 +131,7 @@ void BTaskSwitcher::initialize(unsigned tasks) {
     _tasks[0]->id = 0;
     _tasks[0]->priority = TaskPriority::Medium;
     _pri[_tasks[0]->priority].count = 1;
+
     init_arch();
 
     _initialized = true;
@@ -144,21 +146,19 @@ void setupTasks(unsigned tasks) {
   BTaskSwitcher::initialize(tasks);
 }
 
-void delay( unsigned long ms )
-{
-  if (ms == 0)
-  {
+// copy of standard delay function wrapping call to micros()
+// call to micros() must be synchronized for task switching to work
+void delayTask(unsigned long ms) {
+  if (ms == 0) {
     return;
   }
 
   auto sreg = BTaskSwitcher::disable();
   uint32_t start = micros();
   BTaskSwitcher::restore(sreg);
-  while (ms > 0)
-  {
+  while (ms > 0) {
     yield();
-    while (ms > 0)
-    {
+    while (ms > 0) {
       sreg = BTaskSwitcher::disable();
       auto _micros = micros();
       BTaskSwitcher::restore(sreg);
@@ -172,6 +172,6 @@ void delay( unsigned long ms )
 }
 
 //used by arduino's delay()
-// void yield() {
-//   BTaskSwitcher::yield_task();
-// }
+void yield() {
+  BTaskSwitcher::yield_task();
+}

@@ -21,11 +21,11 @@ extern "C" void yield();
 
 class BTaskSwitcher {
   friend void Dashes(int a);
-  friend void Dots(int b) ;
+  friend void Dots(int b);
   friend void setup();
   friend void loop();
   friend unsigned long micros();
-  friend void delay( unsigned long ms );
+  friend void delay(unsigned long ms);
 protected:
   struct BTaskInfoBase {
     uint8_t* sp;
@@ -110,6 +110,9 @@ protected:
 
     taskInfo->id = new_task;
     taskInfo->priority = priority;
+    if (!_pri[priority].count) {
+      _pri[priority].current = new_task;
+    };
     ++_pri[priority].count;
 
     init_task(taskInfo, (BTaskWrapper)task_wrapper<T>);
@@ -123,6 +126,7 @@ protected:
   friend void killTask(int id);
   friend void setupTasks(unsigned tasks);
   friend void yield();
+  friend void delayTask(unsigned long ms);
   template<typename T>
   friend class BSync;
 
@@ -136,5 +140,5 @@ int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize) {
 
 void killTask(int id);
 void setupTasks(unsigned tasks);
-
+void delayTask(unsigned long ms);
 #endif

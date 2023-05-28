@@ -89,7 +89,9 @@ extern "C" {
   }
 
   int sysTickHook() {
+    auto sreg = BTaskSwitcher::disable();
     BTaskSwitcher::schedule_task();
+    BTaskSwitcher::restore(sreg);
     return 0;
   }
 }
