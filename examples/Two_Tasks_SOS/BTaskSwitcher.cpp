@@ -175,5 +175,5 @@ void delayTask(unsigned long ms) {
 
 //used by arduino's delay()
 void yield() {
-  //BTaskSwitcher::yield_task();
+  BTaskSwitcher::yield_task();
 }
