@@ -129,7 +129,7 @@ protected:
   friend void delayTask(unsigned long ms);
   template<typename T>
   friend class BSync;
-
+  friend class BDisableInterrupts;
   __BTASKSWITCHER_ARCH_CLASS__
 };
 
