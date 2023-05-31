@@ -151,24 +151,27 @@ void BTaskSwitcher::init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper) {
 void BTaskSwitcher::init_arch() {
   BDisableInterrupts cli;
 
-  TCCR1A = 0;  // set timer for normal operation
-  TCCR1B = 0;  // clear register
-  TCNT1 = 0;   // zero timer
+// Clear the Timer on Compare Match (CTC) mode (setting the WGM01 bit).
+  TCCR0A |= (1 << WGM01);
 
-  OCR1A = 16000 - 1;        // load compare register: 16MHz/1/1000Hz = 16000 - 1 (for 1ms tick)
-  TCCR1B |= (1 << WGM12);   // CTC mode, no prescaler: CS12 = 0 and CS10 = 1
-  TCCR1B |= (1 << CS10);    // set prescaler to 1
-  TIMSK1 |= (1 << OCIE1A);  // enable compare match interrupt
+  // Set the Output Compare Register A value for a 1 ms interrupt rate.
+  OCR0A = 249;
+
+  // Enable the Timer0 Compare Match A interrupt.
+  TIMSK0 |= (1 << OCIE0A);
+
+  // The prescaler is already set by Arduino's initialization code to 64.
+  // Hence no need to set it again.
 }
 
-ISR(TIMER1_COMPA_vect) {
+ISR(TIMER0_COMPA_vect) {
   if (BTaskSwitcher::can_switch() && BTaskSwitcher::_current_slice <= 0)
   {
     BTaskSwitcher::schedule_task();
   }
   else
   {
-    --_current_slice;
+    --BTaskSwitcher::_current_slice;
   }
 }
 

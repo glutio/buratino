@@ -3,7 +3,7 @@
 #include "BSync.h"
 
 BSync<bool> dashes(false);
-
+#define SerialUSB Serial
 void Dots(int b) {
   while (1) {
     SerialUSB.println("dots");
@@ -24,8 +24,8 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   setupTasks(2);
   noInterrupts();
-  runTask(Dots, 0, 0, 1024 * 2);
-  runTask(Dashes, 0, 2, 1024 * 2);
+  runTask(Dots, 0, 0, 640);
+  runTask(Dashes, 0, 2, 640);
   interrupts();
 }
 
