@@ -71,7 +71,8 @@ protected:
   static uint8_t* swap_stack(uint8_t* sp);
   static void switch_context();
   static void schedule_task();
-
+  static bool can_switch();
+  
   template<typename T>
   static BTaskInfoBase* alloc_task(BTask<T> task, typename BTask<T>::ArgumentType arg, unsigned stackSize) {
     auto size = sizeof(BTaskInfo<T>) + stackSize + context_size();

@@ -7,14 +7,14 @@ BSync<bool> dashes(false);
 void Dots(int b) {
   while (1) {
     SerialUSB.println("dots");
-    delayTask(500);
+    delay(500);
   }
 }
 
 void Dashes(int a) {
   while (1) {
     SerialUSB.println("dashes");
-    delayTask(500);
+    delay(500);
   }
 }
 
@@ -31,5 +31,5 @@ void setup() {
 
 void loop() {
   SerialUSB.println("loop");
-  delayTask(500);
+  delay(500);
 }

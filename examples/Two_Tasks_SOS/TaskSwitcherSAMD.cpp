@@ -53,6 +53,8 @@ void BTaskSwitcher::switch_context() {
 
 void BTaskSwitcher::init_arch() {
   _next_task = _current_task;
+  uint32_t systick_priority = NVIC_GetPriority(SysTick_IRQn);
+  NVIC_SetPriority(PendSV_IRQn, systick_priority);
 }
 
 extern "C" {
@@ -88,7 +90,7 @@ extern "C" {
 
   int sysTickHook() {
     auto sreg = BTaskSwitcher::disable();
-    if (BTaskSwitcher::_yielded_task < 0) {
+    if (BTaskSwitcher::can_switch()) {
       BTaskSwitcher::schedule_task();
     }
     BTaskSwitcher::restore(sreg);

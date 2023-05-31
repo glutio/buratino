@@ -107,19 +107,22 @@ uint8_t* BTaskSwitcher::swap_stack(uint8_t* sp) {
 }
 
 void BTaskSwitcher::schedule_task() {
-  if (_initialized && _current_task == _next_task) {
-    _next_task = get_next_task();
-    if (_next_task != _current_task) {
-      switch_context();
-    }
+  _next_task = get_next_task();
+  if (_next_task != _current_task) {
+    switch_context();
   }
+}
+
+bool BTaskSwitcher::can_switch() {
+  return _initialized && _yielded_task == -1 && _current_task == _next_task;
 }
 
 void BTaskSwitcher::yield_task() {
   auto sreg = disable();
-  _yielded_task = _current_task;
-  schedule_task();
-  _yielded_task = -1;
+  if (can_switch()) {
+    _yielded_task = _current_task;
+    schedule_task();
+  }
   restore(sreg);
   return;
 }
@@ -146,31 +149,6 @@ void killTask(int id) {
 
 void setupTasks(unsigned tasks) {
   BTaskSwitcher::initialize(tasks);
-}
-
-// copy of standard delay function wrapping call to micros()
-// call to micros() must be synchronized for task switching to work
-void delayTask(unsigned long ms) {
-  if (ms == 0) {
-    return;
-  }
-
-  auto sreg = BTaskSwitcher::disable();
-  uint32_t start = micros();
-  BTaskSwitcher::restore(sreg);
-  while (ms > 0) {
-    yield();
-    while (ms > 0) {
-      sreg = BTaskSwitcher::disable();
-      auto _micros = micros();
-      BTaskSwitcher::restore(sreg);
-      if ((_micros - start) < 1000) {
-        break;
-      }
-      ms--;
-      start += 1000;
-    }
-  }
 }
 
 //used by arduino's delay()
