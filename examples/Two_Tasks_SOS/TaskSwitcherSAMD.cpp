@@ -48,11 +48,12 @@ void BTaskSwitcher::init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper) {
 }
 
 void BTaskSwitcher::switch_context() {
+  // trigger PendSV
   SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
 void BTaskSwitcher::init_arch() {
-  _next_task = _current_task;
+  // set systick and pendsv to same priority
   uint32_t systick_priority = NVIC_GetPriority(SysTick_IRQn);
   NVIC_SetPriority(PendSV_IRQn, systick_priority);
 }
@@ -60,6 +61,8 @@ void BTaskSwitcher::init_arch() {
 extern "C" {
 
   void __attribute__((naked)) PendSV_Handler() {
+    noInterrupts();
+
     asm volatile("push {r4-r7}");
     asm volatile("mov r4,r8");
     asm volatile("mov r5,r9");
@@ -84,16 +87,20 @@ extern "C" {
     asm volatile("mov r10,r6");
     asm volatile("mov r11,r7");
     asm volatile("pop {r4-r7}");
-
+    
+    interrupts();
     asm volatile("bx lr");
   }
 
   int sysTickHook() {
-    auto sreg = BTaskSwitcher::disable();
-    if (BTaskSwitcher::can_switch()) {
+    BDisableInterrupts cli;
+    if (BTaskSwitcher::can_switch() && BTaskSwitcher::_current_slice <= 0) {
       BTaskSwitcher::schedule_task();
     }
-    BTaskSwitcher::restore(sreg);
+    else
+    {
+      --BTaskSwitcher::_current_slice;
+    }
     return 0;
   }
 }

@@ -5,11 +5,21 @@
 
 volatile bool BTaskSwitcher::_initialized = false;
 BList<BTaskSwitcher::BTaskInfoBase*> BTaskSwitcher::_tasks;
-volatile unsigned BTaskSwitcher::_current_task = 0;
-volatile unsigned BTaskSwitcher::_next_task = 0;
-volatile unsigned BTaskSwitcher::_yielded_task = -1;
-
+volatile int BTaskSwitcher::_current_task = 0;
+volatile int BTaskSwitcher::_next_task = 0;
+volatile int BTaskSwitcher::_yielded_task = -1;
+int BTaskSwitcher::_slice = 1;
+volatile int BTaskSwitcher::_current_slice = 0;
 BTaskSwitcher::BSwitchState BTaskSwitcher::_pri[3] = { 0 };
+
+
+BDisableInterrupts::BDisableInterrupts() {
+  enabled = BTaskSwitcher::disable();
+}
+
+BDisableInterrupts::~BDisableInterrupts() {
+  BTaskSwitcher::restore(enabled);
+}
 
 void BTaskSwitcher::restore(bool enable) {
   if (enable) interrupts();
@@ -17,9 +27,8 @@ void BTaskSwitcher::restore(bool enable) {
 }
 
 int BTaskSwitcher::current_task_id() {
-  auto sreg = disable();
+  BDisableInterrupts cli;
   auto id = _current_task;
-  restore(sreg);
   return id;
 }
 
@@ -30,21 +39,21 @@ void BTaskSwitcher::free_task(int id) {
 }
 
 void BTaskSwitcher::kill_task(int id) {
-  auto sreg = disable();
-  if (id > 0 && id < _tasks.Length() && _tasks[id]) {
+  auto cli = disable();
+  if (id > 0 && id < _tasks.Length() && _tasks[id] && _tasks[id]->id > 0) {
     --_pri[_tasks[id]->priority].count;
 
     if (id == _current_task) {
       _tasks[id]->id = -1;
       yield_task();
-      restore(sreg);
+      restore(cli);
       while (1)
         ;
     }
 
     free_task(id);
   }
-  restore(sreg);
+  restore(cli);
 }
 
 int BTaskSwitcher::get_next_task() {
@@ -91,7 +100,6 @@ int BTaskSwitcher::get_next_task() {
 }
 
 uint8_t* BTaskSwitcher::swap_stack(uint8_t* sp) {
-  auto sreg = disable();
   if (_tasks[_current_task]->id < 0) {
     free_task(_current_task);
   } else {
@@ -100,9 +108,9 @@ uint8_t* BTaskSwitcher::swap_stack(uint8_t* sp) {
 
   _current_task = _next_task;
   _yielded_task = -1;
+  _current_slice = _slice;
 
   sp = _tasks[_current_task]->sp;
-  restore(sreg);
   return sp;
 }
 
@@ -114,21 +122,22 @@ void BTaskSwitcher::schedule_task() {
 }
 
 bool BTaskSwitcher::can_switch() {
-  return _initialized && _yielded_task == -1 && _current_task == _next_task;
+  return _initialized && _current_task == _next_task;
 }
 
 void BTaskSwitcher::yield_task() {
-  auto sreg = disable();
+  BDisableInterrupts cli;
   if (can_switch()) {
     _yielded_task = _current_task;
     schedule_task();
   }
-  restore(sreg);
   return;
 }
 
-void BTaskSwitcher::initialize(unsigned tasks) {
-  if (!_initialized) {
+void BTaskSwitcher::initialize(int tasks, int slice) {
+  BDisableInterrupts cli;
+  if (!_initialized && tasks > 0 && slice > 0) {
+    _slice = slice;
     _tasks.Resize(tasks + 1);  // 1 for main loop()
 
     // add the initial loop() task
@@ -147,11 +156,11 @@ void killTask(int id) {
   BTaskSwitcher::kill_task(id);
 }
 
-void setupTasks(unsigned tasks) {
-  BTaskSwitcher::initialize(tasks);
+void setupTasks(int numTasks, int msSlice) {
+  BTaskSwitcher::initialize(numTasks, msSlice);
 }
 
-//used by arduino's delay()
+// used by arduino's delay()
 void yield() {
   BTaskSwitcher::yield_task();
 }

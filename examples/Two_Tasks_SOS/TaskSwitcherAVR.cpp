@@ -142,14 +142,14 @@ void BTaskSwitcher::init_task(BTaskInfoBase* taskInfo, BTaskWrapper wrapper) {
   }
 
   Ctx* ctx = (Ctx*)(taskInfo->sp + 1);
-  ctx->sreg = _BV(SREG_I);  // r25
+  ctx->sreg = _BV(SREG_I);  // enable interrupts
   // compiler/architecture specific, passing argument via registers
   ctx->r24 = lowByte((uintptr_t)taskInfo);   // r24
   ctx->r25 = highByte((uintptr_t)taskInfo);  // r25
 }
 
 void BTaskSwitcher::init_arch() {
-  auto sreg = disable();
+  BDisableInterrupts cli;
 
   TCCR1A = 0;  // set timer for normal operation
   TCCR1B = 0;  // clear register
@@ -159,12 +159,17 @@ void BTaskSwitcher::init_arch() {
   TCCR1B |= (1 << WGM12);   // CTC mode, no prescaler: CS12 = 0 and CS10 = 1
   TCCR1B |= (1 << CS10);    // set prescaler to 1
   TIMSK1 |= (1 << OCIE1A);  // enable compare match interrupt
-
-  restore(sreg);
 }
 
 ISR(TIMER1_COMPA_vect) {
-  BTaskSwitcher::schedule_task();
+  if (BTaskSwitcher::can_switch() && BTaskSwitcher::_current_slice <= 0)
+  {
+    BTaskSwitcher::schedule_task();
+  }
+  else
+  {
+    --_current_slice;
+  }
 }
 
 #endif

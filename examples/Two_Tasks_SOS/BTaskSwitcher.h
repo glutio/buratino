@@ -15,17 +15,20 @@ struct TaskPriority {
   static const int Low = 2;
 };
 
+/* RAII to disable/restore interrups */
+class BDisableInterrupts {
+public:
+  BDisableInterrupts();
+  ~BDisableInterrupts();
+protected:
+  bool enabled;
+};
+
 template<typename T>
 int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize);
 extern "C" void yield();
 
 class BTaskSwitcher {
-  friend void Dashes(int a);
-  friend void Dots(int b);
-  friend void setup();
-  friend void loop();
-  friend unsigned long micros();
-  friend void delay(unsigned long ms);
 protected:
   struct BTaskInfoBase {
     uint8_t* sp;
@@ -51,9 +54,11 @@ protected:
 protected:
   static volatile bool _initialized;
   static BList<BTaskInfoBase*> _tasks;
-  static volatile unsigned _current_task;
-  static volatile unsigned _next_task;
-  static volatile unsigned _yielded_task;
+  static volatile int _current_task;
+  static volatile int _next_task;
+  static volatile int _yielded_task;
+  static volatile int _current_slice;
+  static int _slice;
   static BSwitchState _pri[3];
 
 protected:
@@ -63,7 +68,7 @@ protected:
   static unsigned context_size();
   static bool disable();
   static void restore(bool enable);
-  static void initialize(unsigned tasks);
+  static void initialize(int tasks, int slice);
   static void yield_task();
   static void kill_task(int id);
   static void init_arch();
@@ -92,11 +97,11 @@ protected:
 
   template<typename T>
   static int run_task(BTask<T> task, typename BTask<T>::ArgumentType arg, uint8_t priority, unsigned stackSize) {
-    if (!_initialized || priority > 2 || !stackSize) {
+    BDisableInterrupts cli;
+    if (!_initialized || priority > TaskPriority::Low || !stackSize) {
       return -1;
     }
 
-    auto sreg = disable();
     auto new_task = 0;
     while (new_task < _tasks.Length() && _tasks[new_task]) {
       ++new_task;
@@ -117,17 +122,14 @@ protected:
     ++_pri[priority].count;
 
     init_task(taskInfo, (BTaskWrapper)task_wrapper<T>);
-
-    restore(sreg);
     return new_task;
   }
 
   template<typename T>
-  friend int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize);
-  friend void killTask(int id);
-  friend void setupTasks(unsigned tasks);
+  friend int runTask(void (*task)(T arg), T arg, uint8_t, unsigned);
+  friend void killTask(int);
+  friend void setupTasks(int, int);
   friend void yield();
-  friend void delayTask(unsigned long ms);
   template<typename T>
   friend class BSync;
   friend class BDisableInterrupts;
@@ -140,6 +142,6 @@ int runTask(void (*task)(T arg), T arg, uint8_t priority, unsigned stackSize) {
 }
 
 void killTask(int id);
-void setupTasks(unsigned tasks);
-void delayTask(unsigned long ms);
+void setupTasks(int numTasks = 3, int msSlice = 1);
+
 #endif

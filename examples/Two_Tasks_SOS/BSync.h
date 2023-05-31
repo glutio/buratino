@@ -3,18 +3,6 @@
 
 #include "BTaskSwitcher.h"
 
-class BDisableInterrupts {
-public:
-  BDisableInterrupts() {
-    enabled = BTaskSwitcher::disable();
-  }
-  ~BDisableInterrupts() {
-    BTaskSwitcher::restore(enabled);
-  }
-private:
-  bool enabled;
-};
-
 template<typename T>
 class BSync {
 private:
